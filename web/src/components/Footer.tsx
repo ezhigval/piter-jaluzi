@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import HomeLink from '@/components/HomeLink'
+import { siteConfig } from '@/lib/site-config'
 
 export default function Footer() {
   const [email, setEmail] = useState('')
@@ -137,23 +138,23 @@ export default function Footer() {
             <div className="space-y-2">
               <h4 className="font-medium text-white">Телефон</h4>
               <p className="text-slate-300">
-                <a href="tel:+74951234567" className="hover:text-white transition-colors">
-                  +7 (495) 123-45-67
+                <a href={`tel:${siteConfig.contacts.phoneTel}`} className="hover:text-white transition-colors">
+                  {siteConfig.contacts.phoneDisplay}
                 </a>
               </p>
             </div>
             <div className="space-y-2">
               <h4 className="font-medium text-white">Email</h4>
               <p className="text-slate-300">
-                <a href="mailto:info@jaluxi.ru" className="hover:text-white transition-colors">
-                  info@jaluxi.ru
+                <a href={`mailto:${siteConfig.contacts.email}`} className="hover:text-white transition-colors">
+                  {siteConfig.contacts.email}
                 </a>
               </p>
             </div>
             <div className="space-y-2">
               <h4 className="font-medium text-white">Адрес</h4>
               <p className="text-slate-300">
-                Москва, ул. Примерная, д. 123
+                {siteConfig.contacts.address}
               </p>
             </div>
           </div>

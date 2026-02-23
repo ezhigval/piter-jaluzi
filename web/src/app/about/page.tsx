@@ -1,4 +1,6 @@
 import { Metadata } from 'next'
+import OpenRequestModalButton from '@/components/OpenRequestModalButton'
+import { findBlock, getPublicPageBySlug } from '@/lib/pages-store'
 
 export const metadata: Metadata = {
   title: 'О компании Jaluxi - Производство жалюзи на заказ',
@@ -6,6 +8,14 @@ export const metadata: Metadata = {
 }
 
 export default function AboutPage() {
+  const page = getPublicPageBySlug('/about')
+  const cta = findBlock(page, 'cta')?.content
+  const ctaTitle = cta?.title ?? 'Готовы преобразить ваш интерьер?'
+  const ctaSubtitle = cta?.subtitle ?? 'Получите бесплатную консультацию и расчет стоимости'
+  const primaryText = cta?.primary?.text ?? 'Заказать замер'
+  const secondaryText = cta?.secondary?.text ?? 'Рассчитать стоимость'
+  const secondaryLink = cta?.secondary?.link ?? '/catalog'
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -151,23 +161,23 @@ export default function AboutPage() {
         {/* CTA */}
         <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-12 text-center text-white">
           <h2 className="text-3xl font-light mb-4">
-            Готовы преобразить ваш интерьер?
+            {ctaTitle}
           </h2>
           <p className="text-xl mb-8 text-slate-300">
-            Получите бесплатную консультацию и расчет стоимости
+            {ctaSubtitle}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/contacts"
+            <OpenRequestModalButton
+              kind="measure"
               className="bg-white text-slate-900 px-8 py-4 rounded-full font-medium hover:bg-slate-100 transition-colors duration-200"
             >
-              Заказать замер
-            </a>
+              {primaryText}
+            </OpenRequestModalButton>
             <a
-              href="/catalog"
+              href={secondaryLink}
               className="border-2 border-white text-white px-8 py-4 rounded-full font-medium hover:bg-white hover:text-slate-900 transition-colors duration-200"
             >
-              Рассчитать стоимость
+              {secondaryText}
             </a>
           </div>
         </div>

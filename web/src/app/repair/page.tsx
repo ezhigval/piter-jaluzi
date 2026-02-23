@@ -1,4 +1,7 @@
 import { Metadata } from 'next'
+import OpenRequestModalButton from '@/components/OpenRequestModalButton'
+import { siteConfig } from '@/lib/site-config'
+import { findBlock, getPublicPageBySlug } from '@/lib/pages-store'
 
 export const metadata: Metadata = {
   title: 'Ремонт жалюзи - Jaluxi',
@@ -6,6 +9,12 @@ export const metadata: Metadata = {
 }
 
 export default function RepairPage() {
+  const page = getPublicPageBySlug('/repair')
+  const cta = findBlock(page, 'cta')?.content
+  const ctaTitle = cta?.title ?? 'Нужен ремонт жалюзи?'
+  const ctaSubtitle = cta?.subtitle ?? 'Оставьте заявку и мы свяжемся с вами в течение 15 минут'
+  const primaryText = cta?.primary?.text ?? 'Оставить заявку'
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -120,23 +129,23 @@ export default function RepairPage() {
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-light text-white mb-4">
-            Нужен ремонт жалюзи?
+            {ctaTitle}
           </h2>
           <p className="text-xl text-slate-300 mb-8">
-            Оставьте заявку и мы свяжемся с вами в течение 15 минут
+            {ctaSubtitle}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a
-              href="/contacts"
+            <OpenRequestModalButton
+              kind="request"
               className="bg-white text-slate-900 px-8 py-4 rounded-full font-medium hover:bg-slate-100 transition-colors duration-200"
             >
-              Оставить заявку
-            </a>
+              {primaryText}
+            </OpenRequestModalButton>
             <a
-              href="tel:+74951234567"
+              href={`tel:${siteConfig.contacts.phoneTel}`}
               className="border-2 border-white text-white px-8 py-4 rounded-full font-medium hover:bg-white hover:text-slate-900 transition-colors duration-200"
             >
-              +7 (495) 123-45-67
+              {siteConfig.contacts.phoneDisplay}
             </a>
           </div>
         </div>

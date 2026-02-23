@@ -1,3 +1,6 @@
+import OpenRequestModalButton from '@/components/OpenRequestModalButton'
+import { siteConfig } from '@/lib/site-config'
+
 export default function ContactsPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -15,17 +18,60 @@ export default function ContactsPage() {
             </h2>
             <div className="mt-2 space-y-1 text-sm">
               <p>
-                <span className="font-medium">Телефон:</span> +7 (___) ___-__-__
+                <span className="font-medium">Телефон:</span>{' '}
+                <a
+                  className="hover:underline"
+                  href={`tel:${siteConfig.contacts.phoneTel}`}
+                >
+                  {siteConfig.contacts.phoneDisplay}
+                </a>
               </p>
               <p>
-                <span className="font-medium">WhatsApp / Telegram:</span> по
-                основному номеру
+                <span className="font-medium">WhatsApp / Telegram:</span>{' '}
+                {siteConfig.contacts.whatsappUrl || siteConfig.contacts.telegramUrl ? (
+                  <span>
+                    {siteConfig.contacts.whatsappUrl ? (
+                      <a
+                        className="hover:underline"
+                        href={siteConfig.contacts.whatsappUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        WhatsApp
+                      </a>
+                    ) : null}
+                    {siteConfig.contacts.whatsappUrl && siteConfig.contacts.telegramUrl ? (
+                      <span> / </span>
+                    ) : null}
+                    {siteConfig.contacts.telegramUrl ? (
+                      <a
+                        className="hover:underline"
+                        href={siteConfig.contacts.telegramUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Telegram
+                      </a>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span>по основному номеру</span>
+                )}
               </p>
               <p>
-                <span className="font-medium">E-mail:</span> info@jaluxi.ru
+                <span className="font-medium">E-mail:</span>{' '}
+                <a
+                  className="hover:underline"
+                  href={`mailto:${siteConfig.contacts.email}`}
+                >
+                  {siteConfig.contacts.email}
+                </a>
               </p>
               <p>
-                <span className="font-medium">Город:</span> Москва и область
+                <span className="font-medium">Город:</span> {siteConfig.contacts.city}
+              </p>
+              <p>
+                <span className="font-medium">Адрес:</span> {siteConfig.contacts.address}
               </p>
             </div>
             <p className="mt-3 text-xs text-zinc-500">
@@ -39,11 +85,22 @@ export default function ContactsPage() {
               Режим работы
             </h2>
             <ul className="mt-2 text-sm">
-              <li>Пн–Пт: 10:00–19:00</li>
-              <li>Сб: 11:00–17:00</li>
-              <li>Вс: по предварительной записи</li>
+              <li>{siteConfig.contacts.workHoursWeekdays}</li>
+              <li>{siteConfig.contacts.workHoursSaturday}</li>
+              <li>{siteConfig.contacts.workHoursSunday}</li>
             </ul>
           </div>
+
+          {siteConfig.contacts.yandexMapEmbedUrl ? (
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+              <iframe
+                src={siteConfig.contacts.yandexMapEmbedUrl}
+                className="h-[360px] w-full"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          ) : null}
         </section>
 
         <section>
@@ -55,46 +112,18 @@ export default function ContactsPage() {
               Кратко опишите задачу: изготовление жалюзи или ремонт, количество
               окон и район. Мы перезвоним, чтобы уточнить детали.
             </p>
-            <form className="mt-4 space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">
-                  Имя
-                </label>
-                <input
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900"
-                  placeholder="Как к вам обращаться"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">
-                  Телефон
-                </label>
-                <input
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900"
-                  placeholder="+7 (___) ___-__-__"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">
-                  Комментарий
-                </label>
-                <textarea
-                  rows={4}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900"
-                  placeholder="Например: жалюзи на кухню, 2 окна, горизонтальные, район метро ..."
-                />
-              </div>
-              <button
-                type="button"
+            <div className="mt-4 space-y-3">
+              <OpenRequestModalButton
+                kind="request"
                 className="inline-flex w-full items-center justify-center rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800"
               >
-                Отправить заявку (пока без отправки)
-              </button>
-              <p className="mt-2 text-[11px] text-zinc-500">
+                Оставить заявку
+              </OpenRequestModalButton>
+              <p className="text-[11px] text-zinc-500">
                 Здесь позже можно подключить отправку заявок на почту или в CRM,
                 а также добавить защиту от спама.
               </p>
-            </form>
+            </div>
           </div>
         </section>
       </div>

@@ -4,26 +4,34 @@ import { useState, useEffect } from 'react'
 import { Material, Promotion } from '@/lib/api'
 import BlindsLoader from '@/components/BlindsLoader'
 import { useAnimation } from '@/hooks/useAnimation'
+import OpenRequestModalButton from '@/components/OpenRequestModalButton'
+
+type PageBlock = { type: string; content: any; order?: number }
+type PageContent = { blocks?: PageBlock[] }
 
 export default function Home() {
   const [materials, setMaterials] = useState<Material[]>([])
   const [promotions, setPromotions] = useState<Promotion[]>([])
+  const [pageContent, setPageContent] = useState<PageContent | null>(null)
   const [loading, setLoading] = useState(true)
   const { showAnimation, isFirstVisit, completeAnimation } = useAnimation()
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [materialsRes, promotionsRes] = await Promise.all([
+        const [materialsRes, promotionsRes, pageRes] = await Promise.all([
           fetch('/api/materials'),
-          fetch('/api/promotions')
+          fetch('/api/promotions'),
+          fetch('/api/pages?slug=/')
         ])
         
         const materialsData = await materialsRes.json()
         const promotionsData = await promotionsRes.json()
+        const pageData = await pageRes.json().catch(() => null)
         
         setMaterials(materialsData.slice(0, 6)) // Показываем первые 6 материалов
         setPromotions(promotionsData)
+        if (pageData?.success && pageData?.data) setPageContent(pageData.data)
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
@@ -47,6 +55,22 @@ export default function Home() {
     )
   }
 
+  const blocks = (pageContent?.blocks ?? []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+  const hero = blocks.find((b) => b.type === 'hero')?.content
+  const cta = blocks.find((b) => b.type === 'cta')?.content
+
+  const heroSubtitle = hero?.subtitle ?? 'Изготовление и ремонт жалюзи в Москве'
+  const heroTitle = hero?.title ?? 'Жалюзи под ваш размер окна за 3–5 дней'
+  const heroDescription =
+    hero?.description ??
+    'Подбираем материалы у надежных поставщиков, собираем жалюзи под ваш проем и выезжаем на замер и установку. Также быстро ремонтируем уже установленные изделия.'
+
+  const ctaTitle = cta?.title ?? 'Готовы заказать жалюзи?'
+  const ctaSubtitle = cta?.subtitle ?? 'Получите бесплатную консультацию и расчет стоимости'
+  const ctaPrimaryText = cta?.primary?.text ?? 'Рассчитать стоимость'
+  const ctaPrimaryLink = cta?.primary?.link ?? '/catalog'
+  const ctaSecondaryText = cta?.secondary?.text ?? 'Оставить заявку'
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -55,32 +79,27 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <span className="inline-flex w-fit rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">
-                Изготовление и ремонт жалюзи в Москве
+                {heroSubtitle}
               </span>
               <h1 className="text-5xl md:text-6xl font-light tracking-tight text-gray-900 leading-tight">
-                Жалюзи под ваш 
-                <span className="font-medium text-slate-700"> размер окна</span>
-                <br />
-                за 3–5 дней
+                {heroTitle}
               </h1>
               <p className="text-lg text-gray-600 leading-relaxed">
-                Подбираем материалы у надежных поставщиков, собираем жалюзи под ваш 
-                проем и выезжаем на замер и установку. Также быстро ремонтируем уже 
-                установленные изделия.
+                {heroDescription}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <a
-                  href="/catalog"
+                  href={hero?.ctaPrimary?.link ?? '/catalog'}
                   className="inline-flex items-center justify-center rounded-full bg-slate-900 text-white px-8 py-4 font-medium hover:bg-slate-800 transition-colors duration-200"
                 >
-                  Рассчитать стоимость
+                  {hero?.ctaPrimary?.text ?? 'Рассчитать стоимость'}
                 </a>
-                <a
-                  href="/contacts"
+                <OpenRequestModalButton
+                  kind="measure"
                   className="inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-700 px-8 py-4 font-medium hover:bg-slate-50 transition-colors duration-200"
                 >
                   Вызвать замерщика
-                </a>
+                </OpenRequestModalButton>
               </div>
             </div>
             <div className="relative">
@@ -208,24 +227,24 @@ export default function Home() {
       <section className="py-20 bg-gradient-to-br from-slate-900 to-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-light text-white mb-4">
-            Готовы заказать жалюзи?
+            {ctaTitle}
           </h2>
           <p className="text-xl text-slate-300 mb-8">
-            Получите бесплатную консультацию и расчет стоимости
+            {ctaSubtitle}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="/catalog"
+              href={ctaPrimaryLink}
               className="inline-flex items-center justify-center rounded-full bg-white text-slate-900 px-8 py-4 font-medium hover:bg-slate-100 transition-colors duration-200"
             >
-              Рассчитать стоимость
+              {ctaPrimaryText}
             </a>
-            <a
-              href="/contacts"
+            <OpenRequestModalButton
+              kind="request"
               className="inline-flex items-center justify-center rounded-full border border-slate-600 text-white px-8 py-4 font-medium hover:bg-slate-800 transition-colors duration-200"
             >
-              Оставить заявку
-            </a>
+              {ctaSecondaryText}
+            </OpenRequestModalButton>
           </div>
         </div>
       </section>
