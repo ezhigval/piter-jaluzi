@@ -1,10 +1,19 @@
 import { Metadata } from 'next'
 import OpenRequestModalButton from '@/components/OpenRequestModalButton'
 import { findBlock, getPublicPageBySlug } from '@/lib/pages-store'
+import SEOHead from '@/components/SEOHead'
+import { 
+  generateSEOTitle, 
+  generateSEODescription, 
+  generateKeywords,
+  createWebPageStructuredData,
+  createOrganizationStructuredData
+} from '@/lib/seo-utils'
 
 export const metadata: Metadata = {
-  title: 'О компании Jaluxi - Производство жалюзи на заказ',
-  description: 'Jaluxi - профессиональное производство и установка жалюзи в Москве. Более 10 лет опыта, гарантия качества, индивидуальный подход.',
+  title: 'О компании Jaluxi - Производство жалюзи в Санкт-Петербурге',
+  description: 'Jaluxi - профессиональное производство и установка жалюзи в Санкт-Петербурге. Более 10 лет опыта, гарантия качества, индивидуальный подход.',
+  keywords: 'о компании, jaluxi, жалюзи, санкт-петербург, производство, установка, опыт',
 }
 
 export default function AboutPage() {
@@ -16,8 +25,35 @@ export default function AboutPage() {
   const secondaryText = cta?.secondary?.text ?? 'Рассчитать стоимость'
   const secondaryLink = cta?.secondary?.link ?? '/catalog'
 
+  // SEO Data
+  const seoData = {
+    title: generateSEOTitle('О компании Jaluxi - Производство жалюзи'),
+    description: generateSEODescription('производство и установку жалюзи'),
+    keywords: generateKeywords('жалюзи'),
+    ogTitle: 'Jaluxi - О компании',
+    ogDescription: 'Профессиональное производство и установка жалюзи в Санкт-Петербурге с 2013 года',
+    ogImage: '/images/og-about.jpg',
+    canonicalUrl: 'https://jaluxi.ru/about'
+  }
+
+  const structuredData = [
+    createWebPageStructuredData(
+      'https://jaluxi.ru/about',
+      seoData.title,
+      seoData.description
+    ),
+    createOrganizationStructuredData()
+  ]
+
+  const breadcrumbs = [
+    { name: 'Главная', url: 'https://jaluxi.ru/' },
+    { name: 'О компании', url: 'https://jaluxi.ru/about' }
+  ]
+
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <SEOHead seo={seoData} structuredData={structuredData} breadcrumbs={breadcrumbs} />
+      <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-slate-900 to-slate-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
@@ -183,5 +219,6 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

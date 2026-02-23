@@ -5,6 +5,15 @@ import { Material, Promotion } from '@/lib/api'
 import BlindsLoader from '@/components/BlindsLoader'
 import { useAnimation } from '@/hooks/useAnimation'
 import OpenRequestModalButton from '@/components/OpenRequestModalButton'
+import SEOHead from '@/components/SEOHead'
+import { 
+  generateSEOTitle, 
+  generateSEODescription, 
+  generateKeywords,
+  createWebPageStructuredData,
+  createOrganizationStructuredData,
+  createServiceStructuredData
+} from '@/lib/seo-utils'
 
 type PageBlock = { type: string; content: any; order?: number }
 type PageContent = { blocks?: PageBlock[] }
@@ -15,6 +24,36 @@ export default function Home() {
   const [pageContent, setPageContent] = useState<PageContent | null>(null)
   const [loading, setLoading] = useState(true)
   const { showAnimation, isFirstVisit, completeAnimation } = useAnimation()
+
+  // SEO Data
+  const seoData = {
+    title: generateSEOTitle('Жалюзи в Санкт-Петербурге - Изготовление и установка'),
+    description: generateSEODescription('жалюзи всех видов: горизонтальные, вертикальные, рулонные, римские'),
+    keywords: generateKeywords('жалюзи'),
+    ogTitle: 'Jaluxi - Профессиональные жалюзи в Санкт-Петербурге',
+    ogDescription: 'Изготовление, установка и ремонт жалюзи. Горизонтальные, вертикальные, рулонные. Гарантия качества.',
+    ogImage: '/images/og-home.jpg',
+    canonicalUrl: 'https://jaluxi.ru/'
+  }
+
+  const structuredData = [
+    createWebPageStructuredData(
+      'https://jaluxi.ru/',
+      seoData.title,
+      seoData.description
+    ),
+    createOrganizationStructuredData(),
+    createServiceStructuredData({
+      name: 'Изготовление и установка жалюзи',
+      description: 'Профессиональные услуги по изготовлению, установке и ремонту всех видов жалюзи в Санкт-Петербурге',
+      area: 'Санкт-Петербург',
+      priceRange: '₽₽-₽₽₽'
+    })
+  ]
+
+  const breadcrumbs = [
+    { name: 'Главная', url: 'https://jaluxi.ru/' }
+  ]
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,7 +111,9 @@ export default function Home() {
   const ctaSecondaryText = cta?.secondary?.text ?? 'Оставить заявку'
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <SEOHead seo={seoData} structuredData={structuredData} breadcrumbs={breadcrumbs} />
+      <div className="min-h-screen bg-white">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-slate-50 via-white to-slate-50 text-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24">
@@ -166,7 +207,7 @@ export default function Home() {
               <div key={material.id} className="bg-white rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 group">
                 <img 
                   src={material.imageURL || material.imageUrl || "/images/materials/horizontal-white.jpg"} 
-                  alt={material.name}
+                  alt={`${material.name} - ${material.category} жалюзи. Светопропускаемость ${material.lightTransmission}%. Jaluxi Санкт-Петербург`}
                   className="w-full h-40 sm:h-48 lg:h-56 object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="p-4 sm:p-6">
@@ -249,5 +290,6 @@ export default function Home() {
         </div>
       </section>
     </div>
+    </>
   )
 }

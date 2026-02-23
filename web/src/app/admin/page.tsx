@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import VisualBlockEditor from '@/components/VisualBlockEditor'
 import { blockTemplates, getTemplatesByCategory } from '@/lib/block-templates'
+import SEOEditor from '@/components/SEOEditor'
+import { SEOData } from '@/types/seo'
 
 type Role = 'admin' | 'manager' | 'viewer'
 
@@ -83,6 +85,7 @@ interface PageContent {
   isActive: boolean
   lastModified: string
   modifiedBy: string
+  seo?: SEOData
 }
 
 type TabKey = 'pages' | 'materials' | 'reviews' | 'pricing'
@@ -111,6 +114,7 @@ export default function AdminPage() {
   const selectedPage = useMemo(() => pages.find((p) => p.id === selectedPageId) ?? null, [pages, selectedPageId])
   const [pageDraft, setPageDraft] = useState<PageContent | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [pageEditorTab, setPageEditorTab] = useState<'content' | 'seo'>('content')
 
   const [materials, setMaterials] = useState<Material[]>([])
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null)
@@ -838,18 +842,56 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      <div className="space-y-3">
-                        {(pageDraft.blocks ?? []).slice().sort((a, b) => a.order - b.order).map((block) => (
-                          <BlockEditor
-                            key={block.id}
-                            block={block}
-                            canEdit={hasPerm('content.edit')}
-                            onDuplicate={() => duplicateBlockInDraft(block.id)}
-                            onRemove={() => removeBlockFromDraft(block.id)}
-                            onUpdate={(updates) => updateBlockInDraft(block.id, updates)}
-                          />
-                        ))}
+                      {/* Content/SEO Tabs */}
+                      <div className="border-b border-gray-200">
+                        <nav className="-mb-px flex space-x-8">
+                          <button
+                            onClick={() => setPageEditorTab('content')}
+                            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                              pageEditorTab === 'content'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            Контент
+                          </button>
+                          <button
+                            onClick={() => setPageEditorTab('seo')}
+                            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                              pageEditorTab === 'seo'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            }`}
+                          >
+                            SEO
+                          </button>
+                        </nav>
                       </div>
+
+                      {pageEditorTab === 'content' && (
+                        <div className="space-y-3">
+                          {(pageDraft.blocks ?? []).slice().sort((a, b) => a.order - b.order).map((block) => (
+                            <BlockEditor
+                              key={block.id}
+                              block={block}
+                              canEdit={hasPerm('content.edit')}
+                              onDuplicate={() => duplicateBlockInDraft(block.id)}
+                              onRemove={() => removeBlockFromDraft(block.id)}
+                              onUpdate={(updates) => updateBlockInDraft(block.id, updates)}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {pageEditorTab === 'seo' && (
+                        <div className="space-y-4">
+                          <SEOEditor
+                            seo={pageDraft.seo || { title: '', description: '' }}
+                            onChange={(seo) => updateDraft({ seo })}
+                            pageUrl={`https://jaluxi.ru${pageDraft.slug}`}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
