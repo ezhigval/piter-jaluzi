@@ -540,7 +540,7 @@ export default function AdminPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                 placeholder="admin@jaluxi.ru"
                 required
               />
@@ -552,7 +552,7 @@ export default function AdminPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                 placeholder="Введите пароль"
                 required
               />
@@ -712,7 +712,7 @@ export default function AdminPage() {
                             <input
                               value={pageDraft.title}
                               onChange={(e) => updateDraft({ title: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                               disabled={!hasPerm('content.edit')}
                             />
                           </div>
@@ -721,7 +721,7 @@ export default function AdminPage() {
                             <input
                               value={pageDraft.description}
                               onChange={(e) => updateDraft({ description: e.target.value })}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                               disabled={!hasPerm('content.edit')}
                             />
                           </div>
@@ -735,7 +735,7 @@ export default function AdminPage() {
                               if (!v) return
                               addBlockToDraft(v)
                             }}
-                            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             disabled={!hasPerm('content.edit')}
                           >
                             <option value="">Добавить блок</option>
@@ -794,13 +794,13 @@ export default function AdminPage() {
                       <input
                         value={newMaterial.name ?? ''}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, name: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Название"
                       />
                       <select
                         value={newMaterial.category ?? 'ткани'}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, category: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-slate-500"
                       >
                         <option value="ткани">Ткани</option>
                         <option value="профили">Профили</option>
@@ -810,64 +810,64 @@ export default function AdminPage() {
                       <input
                         value={newMaterial.color ?? ''}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, color: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Цвет"
                       />
                       <input
                         type="number"
                         value={newMaterial.lightTransmission ?? 0}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, lightTransmission: Number(e.target.value) }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Светопропускаемость"
                       />
                       <input
                         type="number"
                         value={newMaterial.pricePerM2 ?? 0}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, pricePerM2: Number(e.target.value) }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Цена м²"
                       />
                       <input
                         value={newMaterial.supplierCode ?? ''}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, supplierCode: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Артикул"
                       />
                       <input
                         value={newMaterial.imageURL ?? ''}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, imageURL: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="URL картинки"
                       />
                       <input
                         value={newMaterial.description ?? ''}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, description: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Описание"
                       />
                       <input
                         value={newMaterial.composition ?? ''}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, composition: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Состав"
                       />
                       <input
                         value={newMaterial.density ?? ''}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, density: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Плотность"
                       />
                       <input
                         value={newMaterial.width ?? ''}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, width: e.target.value }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Ширина"
                       />
                       <input
                         type="number"
                         value={newMaterial.minOrder ?? 0}
                         onChange={(e) => setNewMaterial((p) => ({ ...p, minOrder: Number(e.target.value) }))}
-                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                         placeholder="Мин. заказ"
                       />
                     </div>
@@ -926,7 +926,7 @@ export default function AdminPage() {
                             value={materialDraft.name}
                             onChange={(e) => updateMaterialDraft({ name: e.target.value })}
                             disabled={!hasPerm('materials.edit')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                           />
                         </div>
 
@@ -937,7 +937,7 @@ export default function AdminPage() {
                               value={materialDraft.category}
                               onChange={(e) => updateMaterialDraft({ category: e.target.value })}
                               disabled={!hasPerm('materials.edit')}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                             >
                               <option value="ткани">Ткани</option>
                               <option value="профили">Профили</option>
@@ -951,7 +951,7 @@ export default function AdminPage() {
                               value={materialDraft.color}
                               onChange={(e) => updateMaterialDraft({ color: e.target.value })}
                               disabled={!hasPerm('materials.edit')}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                             />
                           </div>
                         </div>
@@ -964,7 +964,7 @@ export default function AdminPage() {
                               value={materialDraft.pricePerM2}
                               onChange={(e) => updateMaterialDraft({ pricePerM2: Number(e.target.value) })}
                               disabled={!hasPerm('materials.edit')}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                             />
                           </div>
                           <div>
@@ -974,7 +974,7 @@ export default function AdminPage() {
                               value={materialDraft.lightTransmission}
                               onChange={(e) => updateMaterialDraft({ lightTransmission: Number(e.target.value) })}
                               disabled={!hasPerm('materials.edit')}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                             />
                           </div>
                         </div>
@@ -985,7 +985,7 @@ export default function AdminPage() {
                             value={materialDraft.supplierCode}
                             onChange={(e) => updateMaterialDraft({ supplierCode: e.target.value })}
                             disabled={!hasPerm('materials.edit')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                           />
                         </div>
 
@@ -995,7 +995,7 @@ export default function AdminPage() {
                             value={materialDraft.imageURL ?? ''}
                             onChange={(e) => updateMaterialDraft({ imageURL: e.target.value })}
                             disabled={!hasPerm('materials.edit')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                           />
                         </div>
 
@@ -1006,7 +1006,7 @@ export default function AdminPage() {
                             onChange={(e) => updateMaterialDraft({ description: e.target.value })}
                             disabled={!hasPerm('materials.edit')}
                             rows={4}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                           />
                         </div>
 
@@ -1027,7 +1027,7 @@ export default function AdminPage() {
                               value={materialDraft.minOrder ?? 0}
                               onChange={(e) => updateMaterialDraft({ minOrder: Number(e.target.value) })}
                               disabled={!hasPerm('materials.edit')}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                             />
                           </div>
                         </div>
@@ -1074,13 +1074,13 @@ export default function AdminPage() {
                     <input
                       value={newReview.author ?? ''}
                       onChange={(e) => setNewReview((p) => ({ ...p, author: e.target.value }))}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                       placeholder="Автор"
                     />
                     <select
                       value={newReview.rating ?? 5}
                       onChange={(e) => setNewReview((p) => ({ ...p, rating: Number(e.target.value) }))}
-                      className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-slate-500"
                     >
                       {[1, 2, 3, 4, 5].map((r) => (
                         <option key={r} value={r}>
@@ -1091,7 +1091,7 @@ export default function AdminPage() {
                     <textarea
                       value={newReview.text ?? ''}
                       onChange={(e) => setNewReview((p) => ({ ...p, text: e.target.value }))}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500"
                       rows={4}
                       placeholder="Текст"
                     />
@@ -1216,7 +1216,7 @@ function NumberField(props: { label: string; value: number; onChange: (v: number
         value={Number.isFinite(value) ? value : 0}
         onChange={(e) => onChange(Number(e.target.value))}
         disabled={disabled}
-        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:bg-gray-100"
+        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:bg-gray-100"
       />
     </div>
   )
@@ -1368,7 +1368,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
           <input
             value={c.title ?? ''}
             onChange={(e) => onPatch({ title: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -1377,7 +1377,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
             value={c.subtitle ?? ''}
             onChange={(e) => onPatch({ subtitle: e.target.value })}
             rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1386,7 +1386,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
             <input
               value={c.cta?.text ?? ''}
               onChange={(e) => onPatch({ cta: { ...(c.cta ?? {}), text: e.target.value } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -1394,7 +1394,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
             <input
               value={c.cta?.link ?? ''}
               onChange={(e) => onPatch({ cta: { ...(c.cta ?? {}), link: e.target.value } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -1403,7 +1403,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
           <input
             value={c.backgroundImage ?? ''}
             onChange={(e) => onPatch({ backgroundImage: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -1418,7 +1418,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
           <input
             value={c.title ?? ''}
             onChange={(e) => onPatch({ title: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -1427,7 +1427,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
             value={c.body ?? ''}
             onChange={(e) => onPatch({ body: e.target.value })}
             rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1436,7 +1436,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
             <select
               value={c.fontSize ?? '16px'}
               onChange={(e) => onPatch({ fontSize: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {['14px', '16px', '18px', '20px', '24px'].map((v) => (
                 <option key={v} value={v}>
@@ -1450,7 +1450,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
             <select
               value={c.fontFamily ?? 'Inter, sans-serif'}
               onChange={(e) => onPatch({ fontFamily: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {['Inter, sans-serif', 'Georgia, serif', 'Arial, sans-serif', 'Times New Roman, serif'].map((v) => (
                 <option key={v} value={v}>
@@ -1472,7 +1472,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
           <input
             value={c.url ?? ''}
             onChange={(e) => onPatch({ url: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -1480,7 +1480,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
           <input
             value={c.alt ?? ''}
             onChange={(e) => onPatch({ alt: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div>
@@ -1488,7 +1488,7 @@ function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (pat
           <input
             value={c.caption ?? ''}
             onChange={(e) => onPatch({ caption: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
