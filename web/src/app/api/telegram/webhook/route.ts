@@ -28,6 +28,10 @@ async function tgSendMessage(token: string, chatId: number, text: string, extra?
   }
 }
 
+export async function GET() {
+  return NextResponse.json({ ok: true })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const token = requireEnv('TELEGRAM_BOT_TOKEN')
