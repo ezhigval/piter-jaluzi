@@ -1,0 +1,1079 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Material, Review, PricingConfig } from '@/lib/api'
+
+interface SiteContent {
+  id: number
+  page: string
+  section: string
+  contentType: string
+  key: string
+  value: string
+  isActive: boolean
+}
+
+interface SiteConfig {
+  primaryColor: string
+  secondaryColor: string
+  accentColor: string
+  companyName: string
+  companyPhone: string
+  companyEmail: string
+  companyAddress: string
+}
+
+export default function AdminPage() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig>({
+    frameMarkup: 0.3,
+    productionMarkup: 0.5,
+    minAreaM2: 0.5,
+    installationFee: 1500,
+    measurementFee: 800,
+    materialBasePrice: 800,
+    complexityFactor: 1.2
+  })
+  const [siteContent, setSiteContent] = useState<SiteContent[]>([])
+  const [siteConfig, setSiteConfig] = useState<SiteConfig>({
+    primaryColor: '#blue-600',
+    secondaryColor: '#blue-800',
+    accentColor: '#pink-500',
+    companyName: 'Jaluxi',
+    companyPhone: '+7 (495) 123-45-67',
+    companyEmail: 'info@jaluxi.ru',
+    companyAddress: 'Москва, ул. Примерная, д. 123'
+  })
+  const [activeTab, setActiveTab] = useState<'materials' | 'reviews' | 'pricing' | 'content' | 'config'>('materials')
+  
+  // Формы для добавления
+  const [newMaterial, setNewMaterial] = useState<Partial<Material>>({
+    name: '',
+    category: '',
+    color: '',
+    lightTransmission: 50,
+    pricePerM2: 1000,
+    imageURL: ''
+  })
+  const [newReview, setNewReview] = useState<Partial<Review>>({
+    author: '',
+    rating: 5,
+    text: '',
+    date: new Date().toISOString().split('T')[0]
+  })
+  const [showAddMaterial, setShowAddMaterial] = useState(false)
+  const [showAddReview, setShowAddReview] = useState(false)
+
+  // Проверка авторизации при загрузке
+  useEffect(() => {
+    const checkAuth = () => {
+      // Проверяем cookie на стороне клиента
+      const cookieString = document.cookie
+      
+      if (!cookieString) {
+        setIsAuthenticated(false)
+        setLoading(false)
+        return
+      }
+      
+      const cookies = cookieString.split(';')
+      const adminSession = cookies.find(cookie => 
+        cookie.trim().startsWith('admin_session=')
+      )
+      
+      if (!adminSession || adminSession.split('=')[1] !== 'true') {
+        setIsAuthenticated(false)
+        setLoading(false)
+        return
+      }
+      
+      setIsAuthenticated(true)
+      setLoading(false)
+      fetchData()
+    }
+
+    // Проверяем сразу после монтирования
+    checkAuth()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      const [materialsRes, reviewsRes, pricingRes, contentRes, configRes] = await Promise.all([
+        fetch('/api/catalog'),
+        fetch('/api/reviews'),
+        fetch('/api/pricing'),
+        fetch('/api/content'),
+        fetch('/api/config')
+      ])
+
+      const materialsData = await materialsRes.json()
+      const reviewsData = await reviewsRes.json()
+      const pricingData = await pricingRes.json()
+      const contentData = await contentRes.json()
+      const configData = await configRes.json()
+
+      setMaterials(materialsData)
+      setReviews(reviewsData)
+      setPricingConfig(pricingData)
+      setSiteContent(contentData)
+      setSiteConfig(configData)
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    }
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      })
+
+      if (response.ok) {
+        // Перезагружаем страницу после успешной авторизации
+        window.location.reload()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Неверный пароль')
+      }
+    } catch (error) {
+      setError('Ошибка авторизации')
+    }
+  }
+
+  const handleLogout = () => {
+    document.cookie = 'admin_session=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+    window.location.reload()
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-pulse text-slate-400">Загрузка...</div>
+      </div>
+    )
+  }
+
+  // Если не авторизован - показываем форму входа
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-light text-gray-900 mb-2">
+              Вход в админ-панель
+            </h1>
+            <p className="text-gray-600">
+              Jaluxi - Управление сайтом
+            </p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Пароль
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent"
+                placeholder="Введите пароль"
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-slate-900 text-white py-3 rounded-lg font-medium hover:bg-slate-800 transition-colors duration-200"
+            >
+              Войти
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <a
+              href="/"
+              className="text-slate-600 hover:text-slate-900 text-sm transition-colors duration-200"
+            >
+              ← Вернуться на сайт
+            </a>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Админ-панель</h1>
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200"
+          >
+            Выйти
+          </button>
+        </div>
+
+  const deleteMaterial = async (id: number) => {
+    if (!confirm('Удалить этот материал?')) return
+
+    try {
+      const response = await fetch(`/api/materials/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setMaterials(materials.filter(m => m.id !== id))
+        alert('Материал удален')
+      }
+    } catch (error) {
+      console.error('Error deleting material:', error)
+      alert('Ошибка при удалении материала')
+    }
+  }
+
+  const addMaterial = async () => {
+    try {
+      const response = await fetch('/api/materials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMaterial)
+      })
+
+      if (response.ok) {
+        const added = await response.json()
+        setMaterials([...materials, added])
+        setNewMaterial({
+          name: '',
+          category: '',
+          color: '',
+          lightTransmission: 50,
+          pricePerM2: 1000,
+          imageURL: ''
+        })
+        setShowAddMaterial(false)
+        alert('Материал добавлен')
+      }
+    } catch (error) {
+      console.error('Error adding material:', error)
+      alert('Ошибка при добавлении материала')
+    }
+  }
+
+  const addReview = async () => {
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReview)
+      })
+
+      if (response.ok) {
+        const added = await response.json()
+        setReviews([added, ...reviews])
+        setNewReview({
+          author: '',
+          rating: 5,
+          text: '',
+          date: new Date().toISOString().split('T')[0]
+        })
+        setShowAddReview(false)
+        alert('Отзыв добавлен')
+      }
+    } catch (error) {
+      console.error('Error adding review:', error)
+      alert('Ошибка при добавлении отзыва')
+    }
+  }
+
+  const deleteReview = async (id: number) => {
+    if (!confirm('Удалить этот отзыв?')) return
+
+    try {
+      const response = await fetch(`/api/reviews/${id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setReviews(reviews.filter(r => r.id !== id))
+        alert('Отзыв удален')
+      }
+    } catch (error) {
+      console.error('Error deleting review:', error)
+      alert('Ошибка при удалении отзыва')
+    }
+  }
+
+  const updateReviewResponse = async (id: number, response: string) => {
+    try {
+      const res = await fetch(`/api/reviews/${id}/response`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ response })
+      })
+
+      if (res.ok) {
+        setReviews(reviews.map(r => 
+          r.id === id ? { ...r, companyResponse: response } : r
+        ))
+        alert('Ответ компании добавлен')
+      }
+    } catch (error) {
+      console.error('Error updating review response:', error)
+      alert('Ошибка при добавлении ответа')
+    }
+  }
+
+  const updatePricingConfig = async (newConfig: PricingConfig) => {
+    try {
+      const response = await fetch('/api/pricing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newConfig)
+      })
+
+      if (response.ok) {
+        setPricingConfig(await response.json())
+        alert('Конфигурация ценообразования обновлена')
+      }
+    } catch (error) {
+      console.error('Error updating pricing config:', error)
+      alert('Ошибка при обновлении конфигурации')
+    }
+  }
+
+  const updateSiteConfig = async (newConfig: SiteConfig) => {
+    try {
+      const response = await fetch('/api/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newConfig)
+      })
+
+      if (response.ok) {
+        setSiteConfig(await response.json())
+        alert('Конфигурация сайта обновлена')
+      }
+    } catch (error) {
+      console.error('Error updating site config:', error)
+      alert('Ошибка при обновлении конфигурации')
+    }
+  }
+
+  const updateSiteContent = async (content: SiteContent) => {
+    try {
+      const response = await fetch(`/api/content/${content.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(content)
+      })
+
+      if (response.ok) {
+        const updated = await response.json()
+        setSiteContent(prev => prev.map(c => c.id === content.id ? updated : c))
+        alert('Контент обновлен')
+      }
+    } catch (error) {
+      console.error('Error updating content:', error)
+      alert('Ошибка при обновлении контента')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-pulse text-slate-400">Загрузка...</div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-pulse text-slate-400">Перенаправление...</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Админ-панель</h1>
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors duration-200"
+          >
+            Выйти
+          </button>
+        </div>
+
+        <div className="bg-white shadow rounded-lg">
+          <div className="border-b border-gray-200">
+            <nav className="flex -mb-px overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('materials')}
+                className={`py-4 px-6 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'materials'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Материалы ({materials.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('reviews')}
+                className={`py-4 px-6 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'reviews'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Отзывы ({reviews.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('pricing')}
+                className={`py-4 px-6 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'pricing'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Ценообразование
+              </button>
+              <button
+                onClick={() => setActiveTab('content')}
+                className={`py-4 px-6 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'content'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Контент сайта ({siteContent.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('config')}
+                className={`py-4 px-6 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  activeTab === 'config'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Настройки сайта
+              </button>
+            </nav>
+          </div>
+
+          <div className="p-6">
+            {activeTab === 'materials' && (
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Управление материалами</h2>
+                  <button
+                    onClick={() => setShowAddMaterial(true)}
+                    className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors duration-200"
+                  >
+                    + Добавить материал
+                  </button>
+                </div>
+
+                {showAddMaterial && (
+                  <div className="bg-slate-50 rounded-lg p-6 mb-6">
+                    <h3 className="text-lg font-medium mb-4">Новый материал</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <input
+                        type="text"
+                        placeholder="Название"
+                        value={newMaterial.name}
+                        onChange={(e) => setNewMaterial({...newMaterial, name: e.target.value})}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Категория"
+                        value={newMaterial.category}
+                        onChange={(e) => setNewMaterial({...newMaterial, category: e.target.value})}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Цвет"
+                        value={newMaterial.color}
+                        onChange={(e) => setNewMaterial({...newMaterial, color: e.target.value})}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Светопропускаемость %"
+                        value={newMaterial.lightTransmission}
+                        onChange={(e) => setNewMaterial({...newMaterial, lightTransmission: parseInt(e.target.value)})}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Цена за м²"
+                        value={newMaterial.pricePerM2}
+                        onChange={(e) => setNewMaterial({...newMaterial, pricePerM2: parseInt(e.target.value)})}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="URL изображения"
+                        value={newMaterial.imageURL}
+                        onChange={(e) => setNewMaterial({...newMaterial, imageURL: e.target.value})}
+                        className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={addMaterial}
+                        className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors duration-200"
+                      >
+                        Добавить
+                      </button>
+                      <button
+                        onClick={() => setShowAddMaterial(false)}
+                        className="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors duration-200"
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Артикул
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Название
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Категория
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Цвет
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Светопропускаемость
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Цена м²
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Действия
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {materials.map((material) => (
+                        <tr key={material.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {material.supplierCode}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {material.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {material.category}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {material.color}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {material.lightTransmission}%
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {material.pricePerM2} ₽
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button
+                              onClick={() => deleteMaterial(material.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Удалить
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'reviews' && (
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Управление отзывами</h2>
+                  <button
+                    onClick={() => setShowAddReview(true)}
+                    className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors duration-200"
+                  >
+                    + Добавить отзыв
+                  </button>
+                </div>
+
+                {showAddReview && (
+                  <div className="bg-slate-50 rounded-lg p-6 mb-6">
+                    <h3 className="text-lg font-medium mb-4">Новый отзыв</h3>
+                    <div className="space-y-4">
+                      <input
+                        type="text"
+                        placeholder="Имя автора"
+                        value={newReview.author}
+                        onChange={(e) => setNewReview({...newReview, author: e.target.value})}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                      <div className="flex items-center gap-4">
+                        <label>Оценка:</label>
+                        <select
+                          value={newReview.rating}
+                          onChange={(e) => setNewReview({...newReview, rating: parseInt(e.target.value)})}
+                          className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                        >
+                          {[1, 2, 3, 4, 5].map(r => (
+                            <option key={r} value={r}>{r} звезд</option>
+                          ))}
+                        </select>
+                      </div>
+                      <textarea
+                        placeholder="Текст отзыва"
+                        value={newReview.text}
+                        onChange={(e) => setNewReview({...newReview, text: e.target.value})}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={addReview}
+                          className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors duration-200"
+                        >
+                          Добавить
+                        </button>
+                        <button
+                          onClick={() => setShowAddReview(false)}
+                          className="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors duration-200"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {reviews.map((review) => (
+                    <div key={review.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-medium">{review.name || review.author}</h3>
+                              <div className="flex items-center mt-1">
+                                {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                              </div>
+                              <p className="mt-2 text-gray-600">{review.comment || review.text}</p>
+                              <p className="text-sm text-gray-500 mt-2">
+                                {new Date(review.createdAt || review.date || '').toLocaleDateString('ru-RU')}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => deleteReview(review.id)}
+                              className="text-red-600 hover:text-red-900 ml-4"
+                            >
+                              Удалить
+                            </button>
+                          </div>
+                          
+                          {review.companyResponse && (
+                            <div className="mt-4 p-3 bg-slate-50 rounded-lg">
+                              <p className="text-sm font-medium text-slate-700">Ответ компании:</p>
+                              <p className="text-sm text-slate-600 mt-1">{review.companyResponse}</p>
+                            </div>
+                          )}
+                          
+                          <div className="mt-4">
+                            <textarea
+                              placeholder="Ответ компании (оставьте пустым, если ответ не нужен)"
+                              defaultValue={review.companyResponse || ''}
+                              rows={3}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 text-sm"
+                              onBlur={(e) => {
+                                if (e.target.value !== (review.companyResponse || '')) {
+                                  updateReviewResponse(review.id, e.target.value)
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                        {review.imageUrl && (
+                          <img
+                            src={review.imageUrl}
+                            alt="Фото отзыва"
+                            className="w-20 h-20 object-cover rounded ml-4"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'pricing' && (
+              <div>
+                <h2 className="text-xl font-semibold mb-6">Настройки ценообразования</h2>
+                
+                {/* Визуальная формула */}
+                <div className="bg-slate-50 rounded-lg p-6 mb-6">
+                  <h3 className="text-lg font-medium mb-4">Формула расчета стоимости</h3>
+                  <div className="bg-white rounded-lg p-4 border border-slate-200">
+                    <div className="text-center space-y-2">
+                      <div className="text-lg font-mono">
+                        Итоговая цена = (Площадь × Цена материала × (1 + Наценка производства) + Стоимость каркаса × (1 + Наценка каркаса)) × Коэффициент сложности + Плата за установку + Плата за замер
+                      </div>
+                      <div className="text-sm text-slate-600 mt-4">
+                        Пример: (2.5м² × 1000₽ × 1.5 + 500₽ × 1.3) × 1.2 + 1500₽ + 800₽ = 6800₽
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Основные параметры</h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Наценка производства (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={(pricingConfig.productionMarkup || 0) * 100}
+                        onChange={(e) => {
+                          const newConfig = {
+                            ...pricingConfig,
+                            productionMarkup: parseFloat(e.target.value) / 100
+                          }
+                          setPricingConfig(newConfig)
+                        }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Наценка каркаса (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={(pricingConfig.frameMarkup || 0) * 100}
+                        onChange={(e) => {
+                          const newConfig = {
+                            ...pricingConfig,
+                            frameMarkup: parseFloat(e.target.value) / 100
+                          }
+                          setPricingConfig(newConfig)
+                        }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Коэффициент сложности
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={pricingConfig.complexityFactor || 1}
+                        onChange={(e) => {
+                          const newConfig = {
+                            ...pricingConfig,
+                            complexityFactor: parseFloat(e.target.value)
+                          }
+                          setPricingConfig(newConfig)
+                        }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Дополнительные платежи</h3>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Плата за установку (₽)
+                      </label>
+                      <input
+                        type="number"
+                        value={pricingConfig.installationFee || 0}
+                        onChange={(e) => {
+                          const newConfig = {
+                            ...pricingConfig,
+                            installationFee: parseFloat(e.target.value)
+                          }
+                          setPricingConfig(newConfig)
+                        }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Плата за замер (₽)
+                      </label>
+                      <input
+                        type="number"
+                        value={pricingConfig.measurementFee || 0}
+                        onChange={(e) => {
+                          const newConfig = {
+                            ...pricingConfig,
+                            measurementFee: parseFloat(e.target.value)
+                          }
+                          setPricingConfig(newConfig)
+                        }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Базовая цена материала (₽/м²)
+                      </label>
+                      <input
+                        type="number"
+                        value={pricingConfig.materialBasePrice || 0}
+                        onChange={(e) => {
+                          const newConfig = {
+                            ...pricingConfig,
+                            materialBasePrice: parseFloat(e.target.value)
+                          }
+                          setPricingConfig(newConfig)
+                        }}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <button
+                    onClick={() => updatePricingConfig(pricingConfig)}
+                    className="bg-slate-900 text-white px-6 py-3 rounded-lg hover:bg-slate-800 transition-colors duration-200"
+                  >
+                    Сохранить настройки
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'content' && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Управление контентом сайта</h2>
+                <div className="space-y-4">
+                  {siteContent.map((content) => (
+                    <div key={content.id} className="border rounded-lg p-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Страница</label>
+                          <span className="text-sm text-gray-600">{content.page}</span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Секция</label>
+                          <span className="text-sm text-gray-600">{content.section}</span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Тип</label>
+                          <span className="text-sm text-gray-600">{content.contentType}</span>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Ключ</label>
+                          <span className="text-sm text-gray-600">{content.key}</span>
+                        </div>
+                      </div>
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Значение</label>
+                        <textarea
+                          value={content.value}
+                          onChange={(e) => {
+                            const updated = { ...content, value: e.target.value }
+                            setSiteContent(prev => prev.map(c => c.id === content.id ? updated : c))
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          rows={3}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={content.isActive}
+                            onChange={(e) => {
+                              const updated = { ...content, isActive: e.target.checked }
+                              setSiteContent(prev => prev.map(c => c.id === content.id ? updated : c))
+                            }}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">Активен</span>
+                        </label>
+                        <button
+                          onClick={() => updateSiteContent(content)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                        >
+                          Сохранить
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'config' && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Настройки сайта</h2>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Цвета</h3>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Основной цвет
+                      </label>
+                      <input
+                        type="text"
+                        value={siteConfig.primaryColor}
+                        onChange={(e) => {
+                          setSiteConfig({ ...siteConfig, primaryColor: e.target.value })
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Вторичный цвет
+                      </label>
+                      <input
+                        type="text"
+                        value={siteConfig.secondaryColor}
+                        onChange={(e) => {
+                          setSiteConfig({ ...siteConfig, secondaryColor: e.target.value })
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Акцентный цвет
+                      </label>
+                      <input
+                        type="text"
+                        value={siteConfig.accentColor}
+                        onChange={(e) => {
+                          setSiteConfig({ ...siteConfig, accentColor: e.target.value })
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Контактная информация</h3>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Название компании
+                      </label>
+                      <input
+                        type="text"
+                        value={siteConfig.companyName}
+                        onChange={(e) => {
+                          setSiteConfig({ ...siteConfig, companyName: e.target.value })
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Телефон
+                      </label>
+                      <input
+                        type="text"
+                        value={siteConfig.companyPhone}
+                        onChange={(e) => {
+                          setSiteConfig({ ...siteConfig, companyPhone: e.target.value })
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={siteConfig.companyEmail}
+                        onChange={(e) => {
+                          setSiteConfig({ ...siteConfig, companyEmail: e.target.value })
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Адрес
+                      </label>
+                      <input
+                        type="text"
+                        value={siteConfig.companyAddress}
+                        onChange={(e) => {
+                          setSiteConfig({ ...siteConfig, companyAddress: e.target.value })
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6">
+                  <button
+                    onClick={() => updateSiteConfig(siteConfig)}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+                  >
+                    Сохранить настройки сайта
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

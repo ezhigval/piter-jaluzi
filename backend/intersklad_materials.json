@@ -1,0 +1,156 @@
+{
+  "materials": [
+    {
+      "supplierCode": "INT-HOR-ALU-25-WHITE",
+      "name": "Алюминиевые горизонтальные жалюзи 25мм, белый",
+      "category": "Горизонтальные жалюзи",
+      "color": "Белый",
+      "lightTransmission": 70,
+      "pricePerM2": 450,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/123/horizontal_white.jpg",
+      "description": "Классические алюминиевые жалюзи 25мм для офисов и домов"
+    },
+    {
+      "supplierCode": "INT-HOR-ALU-25-BROWN",
+      "name": "Алюминиевые горизонтальные жалюзи 25мм, коричневый",
+      "category": "Горизонтальные жалюзи",
+      "color": "Коричневый",
+      "lightTransmission": 65,
+      "pricePerM2": 480,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/124/horizontal_brown.jpg",
+      "description": "Алюминиевые жалюзи в классическом коричневом цвете"
+    },
+    {
+      "supplierCode": "INT-HOR-ALU-16-SILVER",
+      "name": "Алюминиевые горизонтальные жалюзи 16мм, серебро",
+      "category": "Горизонтальные жалюзи",
+      "color": "Серебряный",
+      "lightTransmission": 75,
+      "pricePerM2": 520,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/125/horizontal_silver.jpg",
+      "description": "Тонкие алюминиевые жалюзи 16мм с перламутровым покрытием"
+    },
+    {
+      "supplierCode": "INT-HOR-WOOD-50-OAK",
+      "name": "Деревянные горизонтальные жалюзи 50мм, дуб",
+      "category": "Горизонтальные жалюзи",
+      "color": "Дуб",
+      "lightTransmission": 40,
+      "pricePerM2": 1200,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/126/wooden_oak.jpg",
+      "description": "Экологичные деревянные жалюзи из натурального дуба"
+    },
+    {
+      "supplierCode": "INT-HOR-WOOD-50-WENGE",
+      "name": "Деревянные горизонтальные жалюзи 50мм, венге",
+      "category": "Горизонтальные жалюзи",
+      "color": "Венге",
+      "lightTransmission": 35,
+      "pricePerM2": 1350,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/127/wooden_wenge.jpg",
+      "description": "Деревянные жалюзи в темном цвете венге с защитным покрытием"
+    },
+    {
+      "supplierCode": "INT-VERT-TEXTURE-89-BEIGE",
+      "name": "Вертикальные тканевые жалюзи 89мм, бежевый",
+      "category": "Вертикальные жалюзи",
+      "color": "Бежевый",
+      "lightTransmission": 50,
+      "pricePerM2": 650,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/128/vertical_beige.jpg",
+      "description": "Тканевые вертикальные жалюзи с текстурой, 89мм"
+    },
+    {
+      "supplierCode": "INT-VERT-TEXTURE-89-GREY",
+      "name": "Вертикальные тканевые жалюзи 89мм, серый",
+      "category": "Вертикальные жалюзи",
+      "color": "Серый",
+      "lightTransmission": 45,
+      "pricePerM2": 680,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/129/vertical_grey.jpg",
+      "description": "Современные тканевые жалюзи в сером цвете"
+    },
+    {
+      "supplierCode": "INT-VERT-POLYESTER-89-BLUE",
+      "name": "Вертикальные жалюзи из полиэстера 89мм, синий",
+      "category": "Вертикальные жалюзи",
+      "color": "Синий",
+      "lightTransmission": 60,
+      "pricePerM2": 550,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/130/vertical_blue.jpg",
+      "description": "Полиэстеровые вертикальные жалюзи с защитой от выцветания"
+    },
+    {
+      "supplierCode": "INT-VERT-JACQUARD-89-GREEN",
+      "name": "Вертикальные жалюзи жаккард 89мм, зеленый",
+      "category": "Вертикальные жалюзи",
+      "color": "Зеленый",
+      "lightTransmission": 40,
+      "pricePerM2": 850,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/131/vertical_green.jpg",
+      "description": "Премиальные жаккардовые жалюзи с узором"
+    },
+    {
+      "supplierCode": "INT-VERT-PVC-89-WHITE",
+      "name": "Вертикальные жалюзи из ПВХ 89мм, белый",
+      "category": "Вертикальные жалюзи",
+      "color": "Белый",
+      "lightTransmission": 80,
+      "pricePerM2": 420,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/132/vertical_pvc.jpg",
+      "description": "Практичные ПВХ жалюзи для влажных помещений"
+    },
+    {
+      "supplierCode": "INT-ROLLER-BLACKOUT-GREY",
+      "name": "Рулонные шторы блэкаут, серый",
+      "category": "Рулонные шторы",
+      "color": "Серый",
+      "lightTransmission": 0,
+      "pricePerM2": 850,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/133/roller_blackout.jpg",
+      "description": "Полнозатемняющие рулонные шторы блэкаут"
+    },
+    {
+      "supplierCode": "INT-ROLLER-ZEBRA-WHITE",
+      "name": "Рулонные шторы зебра, бело-серый",
+      "category": "Рулонные шторы",
+      "color": "Бело-серый",
+      "lightTransmission": 30,
+      "pricePerM2": 950,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/134/roller_zebra.jpg",
+      "description": "Современные рулонные шторы зебра с двойным полотном"
+    },
+    {
+      "supplierCode": "INT-ROLLER-TRANSPARENT-BEIGE",
+      "name": "Прозрачные рулонные шторы, бежевый",
+      "category": "Рулонные шторы",
+      "color": "Бежевый",
+      "lightTransmission": 85,
+      "pricePerM2": 450,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/135/roller_transparent.jpg",
+      "description": "Легкие прозрачные шторы для защиты от яркого солнца"
+    },
+    {
+      "supplierCode": "INT-ROLLER-DIMOUT-BLUE",
+      "name": "Рулонные шторы димаут, синий",
+      "category": "Рулонные шторы",
+      "color": "Синий",
+      "lightTransmission": 15,
+      "pricePerM2": 750,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/136/roller_dimout.jpg",
+      "description": "Полупрозрачные шторы димаут для мягкого рассеивания света"
+    },
+    {
+      "supplierCode": "INT-ROLLER-DAY-NIGHT-WHITE",
+      "name": "Рулонные шторы день-ночь, белый",
+      "category": "Рулонные шторы",
+      "color": "Белый",
+      "lightTransmission": 25,
+      "pricePerM2": 1100,
+      "imageUrl": "https://www.intersklad.ru/upload/iblock/137/roller_daynight.jpg",
+      "description": "Универсальные шторы день-ночь с регулировкой света"
+    }
+  ],
+  "source": "https://www.intersklad.ru/",
+  "parsedAt": "2026-02-23 20:00:16"
+}

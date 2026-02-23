@@ -1,0 +1,152 @@
+[
+  {
+    "id": 1,
+    "supplierCode": "INT-HOR-ALU-25-WHITE",
+    "name": "Алюминиевые горизонтальные жалюзи 25мм, белый",
+    "category": "Горизонтальные жалюзи",
+    "color": "Белый",
+    "lightTransmission": 70,
+    "pricePerM2": 450,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/123/horizontal_white.jpg"
+  },
+  {
+    "id": 2,
+    "supplierCode": "INT-HOR-ALU-25-BROWN",
+    "name": "Алюминиевые горизонтальные жалюзи 25мм, коричневый",
+    "category": "Горизонтальные жалюзи",
+    "color": "Коричневый",
+    "lightTransmission": 65,
+    "pricePerM2": 480,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/124/horizontal_brown.jpg"
+  },
+  {
+    "id": 3,
+    "supplierCode": "INT-HOR-ALU-16-SILVER",
+    "name": "Алюминиевые горизонтальные жалюзи 16мм, серебро",
+    "category": "Горизонтальные жалюзи",
+    "color": "Серебряный",
+    "lightTransmission": 75,
+    "pricePerM2": 520,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/125/horizontal_silver.jpg"
+  },
+  {
+    "id": 4,
+    "supplierCode": "INT-HOR-WOOD-50-OAK",
+    "name": "Деревянные горизонтальные жалюзи 50мм, дуб",
+    "category": "Горизонтальные жалюзи",
+    "color": "Дуб",
+    "lightTransmission": 40,
+    "pricePerM2": 1200,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/126/wooden_oak.jpg"
+  },
+  {
+    "id": 5,
+    "supplierCode": "INT-HOR-WOOD-50-WENGE",
+    "name": "Деревянные горизонтальные жалюзи 50мм, венге",
+    "category": "Горизонтальные жалюзи",
+    "color": "Венге",
+    "lightTransmission": 35,
+    "pricePerM2": 1350,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/127/wooden_wenge.jpg"
+  },
+  {
+    "id": 6,
+    "supplierCode": "INT-VERT-TEXTURE-89-BEIGE",
+    "name": "Вертикальные тканевые жалюзи 89мм, бежевый",
+    "category": "Вертикальные жалюзи",
+    "color": "Бежевый",
+    "lightTransmission": 50,
+    "pricePerM2": 650,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/128/vertical_beige.jpg"
+  },
+  {
+    "id": 7,
+    "supplierCode": "INT-VERT-TEXTURE-89-GREY",
+    "name": "Вертикальные тканевые жалюзи 89мм, серый",
+    "category": "Вертикальные жалюзи",
+    "color": "Серый",
+    "lightTransmission": 45,
+    "pricePerM2": 680,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/129/vertical_grey.jpg"
+  },
+  {
+    "id": 8,
+    "supplierCode": "INT-VERT-POLYESTER-89-BLUE",
+    "name": "Вертикальные жалюзи из полиэстера 89мм, синий",
+    "category": "Вертикальные жалюзи",
+    "color": "Синий",
+    "lightTransmission": 60,
+    "pricePerM2": 550,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/130/vertical_blue.jpg"
+  },
+  {
+    "id": 9,
+    "supplierCode": "INT-VERT-JACQUARD-89-GREEN",
+    "name": "Вертикальные жалюзи жаккард 89мм, зеленый",
+    "category": "Вертикальные жалюзи",
+    "color": "Зеленый",
+    "lightTransmission": 40,
+    "pricePerM2": 850,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/131/vertical_green.jpg"
+  },
+  {
+    "id": 10,
+    "supplierCode": "INT-VERT-PVC-89-WHITE",
+    "name": "Вертикальные жалюзи из ПВХ 89мм, белый",
+    "category": "Вертикальные жалюзи",
+    "color": "Белый",
+    "lightTransmission": 80,
+    "pricePerM2": 420,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/132/vertical_pvc.jpg"
+  },
+  {
+    "id": 11,
+    "supplierCode": "INT-ROLLER-BLACKOUT-GREY",
+    "name": "Рулонные шторы блэкаут, серый",
+    "category": "Рулонные шторы",
+    "color": "Серый",
+    "lightTransmission": 0,
+    "pricePerM2": 850,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/133/roller_blackout.jpg"
+  },
+  {
+    "id": 12,
+    "supplierCode": "INT-ROLLER-ZEBRA-WHITE",
+    "name": "Рулонные шторы зебра, бело-серый",
+    "category": "Рулонные шторы",
+    "color": "Бело-серый",
+    "lightTransmission": 30,
+    "pricePerM2": 950,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/134/roller_zebra.jpg"
+  },
+  {
+    "id": 13,
+    "supplierCode": "INT-ROLLER-TRANSPARENT-BEIGE",
+    "name": "Прозрачные рулонные шторы, бежевый",
+    "category": "Рулонные шторы",
+    "color": "Бежевый",
+    "lightTransmission": 85,
+    "pricePerM2": 450,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/135/roller_transparent.jpg"
+  },
+  {
+    "id": 14,
+    "supplierCode": "INT-ROLLER-DIMOUT-BLUE",
+    "name": "Рулонные шторы димаут, синий",
+    "category": "Рулонные шторы",
+    "color": "Синий",
+    "lightTransmission": 15,
+    "pricePerM2": 750,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/136/roller_dimout.jpg"
+  },
+  {
+    "id": 15,
+    "supplierCode": "INT-ROLLER-DAY-NIGHT-WHITE",
+    "name": "Рулонные шторы день-ночь, белый",
+    "category": "Рулонные шторы",
+    "color": "Белый",
+    "lightTransmission": 25,
+    "pricePerM2": 1100,
+    "imageUrl": "https://www.intersklad.ru/upload/iblock/137/roller_daynight.jpg"
+  }
+]
