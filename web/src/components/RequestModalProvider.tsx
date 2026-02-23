@@ -27,34 +27,64 @@ export default function RequestModalProvider({ children }: { children: React.Rea
   const [phone, setPhone] = useState('')
   const [comment, setComment] = useState('')
 
-  const [status, setStatus] = useState<'idle' | 'success'>('idle')
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = useState('')
 
   const close = useCallback(() => {
     setIsOpen(false)
     setStatus('idle')
+    setErrorMessage('')
   }, [])
 
   const open = useCallback((nextKind: RequestModalKind = 'request') => {
     setKind(nextKind)
     setIsOpen(true)
     setStatus('idle')
+    setErrorMessage('')
   }, [])
 
   const value = useMemo(() => ({ open, close }), [open, close])
 
   const title = kind === 'measure' ? 'Вызвать замерщика' : 'Оставить заявку'
 
-  const submit = useCallback(() => {
+  const submit = useCallback(async () => {
     if (!name.trim() || !phone.trim()) return
 
-    setStatus('success')
-    setTimeout(() => {
-      setName('')
-      setPhone('')
-      setComment('')
-      close()
-    }, 800)
-  }, [name, phone, close])
+    setStatus('submitting')
+    setErrorMessage('')
+
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind,
+          name: name.trim(),
+          phone: phone.trim(),
+          comment: comment.trim(),
+          pageUrl: typeof window !== 'undefined' ? window.location.href : '',
+        }),
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        setStatus('error')
+        setErrorMessage(text || 'Не удалось отправить заявку')
+        return
+      }
+
+      setStatus('success')
+      setTimeout(() => {
+        setName('')
+        setPhone('')
+        setComment('')
+        close()
+      }, 800)
+    } catch (e) {
+      setStatus('error')
+      setErrorMessage(e instanceof Error ? e.message : 'Не удалось отправить заявку')
+    }
+  }, [name, phone, comment, kind, close])
 
   return (
     <RequestModalContext.Provider value={value}>
@@ -139,11 +169,19 @@ export default function RequestModalProvider({ children }: { children: React.Rea
                 <button
                   type="button"
                   onClick={submit}
-                  disabled={!name.trim() || !phone.trim()}
+                  disabled={!name.trim() || !phone.trim() || status === 'submitting'}
                   className="inline-flex w-full items-center justify-center rounded-full bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {status === 'success' ? 'Заявка принята' : 'Отправить'}
+                  {status === 'submitting'
+                    ? 'Отправка...'
+                    : status === 'success'
+                      ? 'Заявка принята'
+                      : 'Отправить'}
                 </button>
+
+                {status === 'error' ? (
+                  <p className="text-xs text-red-600">{errorMessage}</p>
+                ) : null}
 
                 <p className="text-[11px] text-zinc-500">
                   Нажимая «Отправить», вы соглашаетесь на обработку персональных данных.
