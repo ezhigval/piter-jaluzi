@@ -1,6 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Head from 'next/head'
+import VisualBlockEditor from '@/components/VisualBlockEditor'
+import { blockTemplates, getTemplatesByCategory } from '@/lib/block-templates'
 
 type Role = 'admin' | 'manager' | 'viewer'
 
@@ -328,6 +331,18 @@ export default function AdminPage() {
     updateDraft({ blocks: [...(pageDraft.blocks ?? []), block] })
   }
 
+  const addBlockWithContentToDraft = (type: PageBlockType, content: any) => {
+    if (!pageDraft) return
+    const block: PageBlock = {
+      id: Date.now().toString(),
+      type,
+      order: (pageDraft.blocks?.length ?? 0) + 1,
+      content,
+      styles: { backgroundColor: '#ffffff', padding: 'medium', textAlign: 'left' },
+    }
+    updateDraft({ blocks: [...(pageDraft.blocks ?? []), block] })
+  }
+
   const removeBlockFromDraft = (blockId: string) => {
     if (!pageDraft) return
     updateDraft({ blocks: (pageDraft.blocks ?? []).filter((b) => b.id !== blockId) })
@@ -589,7 +604,35 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <>
+      <Head>
+        <meta name="viewport" content="width=1200, initial-scale=1.0" />
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @media (max-width: 1199px) {
+              body {
+                overflow: hidden;
+              }
+              body::before {
+                content: 'Админ-панель доступна только на компьютерах. Минимальная ширина экрана: 1200px';
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #1e293b;
+                color: white;
+                padding: 2rem;
+                border-radius: 0.5rem;
+                text-align: center;
+                font-family: system-ui, -apple-system, sans-serif;
+                z-index: 9999;
+                max-width: 90%;
+              }
+            }
+          `
+        }} />
+      </Head>
+      <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -746,6 +789,45 @@ export default function AdminPage() {
                             <option value="testimonials">Testimonials</option>
                             <option value="cta">CTA</option>
                             <option value="gallery">Gallery</option>
+                          </select>
+
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              const templateId = e.target.value
+                              if (!templateId) return
+                              const template = blockTemplates.find(t => t.id === templateId)
+                              if (!template) return
+                              
+                              // Add all blocks from template
+                              template.blocks.forEach(block => {
+                                addBlockWithContentToDraft(block.type, block.content)
+                              })
+                            }}
+                            className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={!hasPerm('content.edit')}
+                          >
+                            <option value="">Добавить шаблон</option>
+                            <optgroup label="Главная страница">
+                              {getTemplatesByCategory('home').map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="О нас">
+                              {getTemplatesByCategory('about').map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Ремонт">
+                              {getTemplatesByCategory('repair').map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="Общие">
+                              {getTemplatesByCategory('common').map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                              ))}
+                            </optgroup>
                           </select>
 
                           {hasPerm('content.edit') && (
@@ -1203,6 +1285,7 @@ export default function AdminPage() {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
@@ -1310,7 +1393,7 @@ function BlockEditor(props: {
               {jsonError && <div className="text-sm text-red-700">{jsonError}</div>}
             </div>
           ) : (
-            <BlockVisualEditor block={block} onPatch={updateContent} />
+            <VisualBlockEditor block={block} onUpdate={onUpdate} canEdit={canEdit} />
           )}
         </div>
       )}
@@ -1357,155 +1440,3 @@ function BlockPreview({ block }: { block: PageBlock }) {
   )
 }
 
-function BlockVisualEditor({ block, onPatch }: { block: PageBlock; onPatch: (patch: any) => void }) {
-  const c = block.content ?? {}
-
-  if (block.type === 'hero') {
-    return (
-      <div className="space-y-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Заголовок</label>
-          <input
-            value={c.title ?? ''}
-            onChange={(e) => onPatch({ title: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Подзаголовок</label>
-          <textarea
-            value={c.subtitle ?? ''}
-            onChange={(e) => onPatch({ subtitle: e.target.value })}
-            rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Текст кнопки</label>
-            <input
-              value={c.cta?.text ?? ''}
-              onChange={(e) => onPatch({ cta: { ...(c.cta ?? {}), text: e.target.value } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Ссылка кнопки</label>
-            <input
-              value={c.cta?.link ?? ''}
-              onChange={(e) => onPatch({ cta: { ...(c.cta ?? {}), link: e.target.value } })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Фон (URL картинки)</label>
-          <input
-            value={c.backgroundImage ?? ''}
-            onChange={(e) => onPatch({ backgroundImage: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-    )
-  }
-
-  if (block.type === 'text') {
-    return (
-      <div className="space-y-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Заголовок</label>
-          <input
-            value={c.title ?? ''}
-            onChange={(e) => onPatch({ title: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Текст</label>
-          <textarea
-            value={c.body ?? ''}
-            onChange={(e) => onPatch({ body: e.target.value })}
-            rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Размер шрифта</label>
-            <select
-              value={c.fontSize ?? '16px'}
-              onChange={(e) => onPatch({ fontSize: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {['14px', '16px', '18px', '20px', '24px'].map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Шрифт</label>
-            <select
-              value={c.fontFamily ?? 'Inter, sans-serif'}
-              onChange={(e) => onPatch({ fontFamily: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {['Inter, sans-serif', 'Georgia, serif', 'Arial, sans-serif', 'Times New Roman, serif'].map((v) => (
-                <option key={v} value={v}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (block.type === 'image') {
-    return (
-      <div className="space-y-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">URL</label>
-          <input
-            value={c.url ?? ''}
-            onChange={(e) => onPatch({ url: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Alt</label>
-          <input
-            value={c.alt ?? ''}
-            onChange={(e) => onPatch({ alt: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Подпись</label>
-          <input
-            value={c.caption ?? ''}
-            onChange={(e) => onPatch({ caption: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-2">
-      <textarea
-        value={JSON.stringify(block.content ?? {}, null, 2)}
-        onChange={(e) => {
-          const parsed = safeJsonParse(e.target.value)
-          if (!parsed.ok) return
-          onPatch(parsed.data)
-        }}
-        className="w-full h-48 p-2 border rounded font-mono text-sm"
-      />
-    </div>
-  )
-}
