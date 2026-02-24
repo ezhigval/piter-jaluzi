@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 
-export function useLoadingAnimation(minDuration: number = 2000) {
+export function useLoadingAnimation(minDuration: number = 3500) {
   const [isLoading, setIsLoading] = useState(true)
   const [isReady, setIsReady] = useState(false)
 
