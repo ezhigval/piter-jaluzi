@@ -8,7 +8,7 @@ interface SitemapEntry {
 }
 
 export async function GET() {
-  const baseUrl = 'https://jaluxi.ru'
+  const baseUrl = 'https://severnyj-kontur.ru'
   const currentDate = new Date().toISOString()
 
   // Static pages
