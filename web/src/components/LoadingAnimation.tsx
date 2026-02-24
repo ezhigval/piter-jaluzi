@@ -17,8 +17,8 @@ export default function LoadingAnimation() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Сайт виден под жалюзи */}
-      <div className="absolute inset-0 bg-white">
+      {/* Сайт виден под жалюзи с темным фоном */}
+      <div className="absolute inset-0 bg-black/70">
         {/* Затемнение сайта во время анимации */}
         <div className="absolute inset-0 bg-black/30 transition-opacity duration-1000"></div>
       </div>
@@ -31,8 +31,8 @@ export default function LoadingAnimation() {
           <p className="text-slate-200 drop-shadow-md">Жалюзи для вашего интерьера</p>
         </div>
 
-        {/* Жалюзи закрывают весь экран */}
-        <div className="absolute inset-0 flex flex-col">
+        {/* Жалюзи закрывают весь экран - ламели поднимаются снизу вверх */}
+        <div className="absolute inset-0 flex flex-col-reverse">
           {[...Array(40)].map((_, index) => (
             <div
               key={index}
@@ -41,7 +41,7 @@ export default function LoadingAnimation() {
                 '--delay': `${index * 0.03}s`,
                 '--duration': '0.8s',
                 '--initial-height': `${100 / 40}%`,
-                '--from-bottom': `${index * 2.5}px`, // Начальная позиция снизу
+                '--stack-position': `${index * 0.2}px`, // Позиция в стопке
               } as React.CSSProperties}
             >
               <div className="lamella-inner">
@@ -86,6 +86,7 @@ export default function LoadingAnimation() {
               className="stacked-lamella"
               style={{
                 '--delay': `${2.8 + index * 0.01}s`,
+                '--stack-offset': `${index * 0.2}px`,
               } as React.CSSProperties}
             >
               <div className="stacked-lamella-inner"></div>
@@ -121,7 +122,7 @@ export default function LoadingAnimation() {
           border-radius: 1px;
           position: relative;
           overflow: hidden;
-          transform: translateY(var(--from-bottom)) rotateX(0deg);
+          transform: translateY(0) rotateX(0deg);
           animation: lamellaOpen var(--duration) cubic-bezier(0.4, 0, 0.2, 1) var(--delay) forwards;
           box-shadow: 
             0 1px 3px rgba(0, 0, 0, 0.5),
@@ -178,27 +179,27 @@ export default function LoadingAnimation() {
 
         @keyframes lamellaOpen {
           0% {
-            transform: translateY(var(--from-bottom)) rotateX(0deg) scaleY(1);
+            transform: translateY(0) rotateX(0deg) scaleY(1);
             opacity: 1;
             height: var(--initial-height);
           }
           30% {
-            transform: translateY(calc(var(--from-bottom) - 20px)) rotateX(-5deg) scaleY(0.95);
+            transform: translateY(-20px) rotateX(-5deg) scaleY(0.95);
             opacity: 1;
             height: var(--initial-height);
           }
           60% {
-            transform: translateY(calc(var(--from-bottom) - 60px)) rotateX(-15deg) scaleY(0.8);
+            transform: translateY(-60px) rotateX(-15deg) scaleY(0.8);
             opacity: 0.8;
             height: calc(var(--initial-height) * 0.8);
           }
           85% {
-            transform: translateY(calc(var(--from-bottom) - 120px)) rotateX(-25deg) scaleY(0.6);
+            transform: translateY(-120px) rotateX(-25deg) scaleY(0.6);
             opacity: 0.4;
             height: calc(var(--initial-height) * 0.6);
           }
           100% {
-            transform: translateY(calc(var(--from-bottom) - 200px)) rotateX(-35deg) scaleY(0.4);
+            transform: translateY(-200px) rotateX(-35deg) scaleY(0.4);
             opacity: 0;
             height: calc(var(--initial-height) * 0.4);
           }
@@ -273,22 +274,51 @@ export default function LoadingAnimation() {
           }
           100% {
             opacity: 1;
-            transform: scale(0.7) translateY(0) rotateX(-35deg);
+            transform: scale(0.7) translateY(var(--stack-offset)) rotateX(-35deg);
           }
         }
 
-        /* Эффект волны при открытии */
-        .lamella:nth-child(3n) {
-          animation-delay: calc(var(--delay) + 0.05s);
-        }
-
-        .lamella:nth-child(3n+1) {
-          animation-delay: calc(var(--delay) + 0.02s);
-        }
-
-        .lamella:nth-child(3n+2) {
-          animation-delay: calc(var(--delay) + 0.08s);
-        }
+        /* Эффект волны при открытии - ламели снизу поднимаются последовательно */
+        .lamella:nth-child(1) { animation-delay: 0.03s; }
+        .lamella:nth-child(2) { animation-delay: 0.06s; }
+        .lamella:nth-child(3) { animation-delay: 0.09s; }
+        .lamella:nth-child(4) { animation-delay: 0.12s; }
+        .lamella:nth-child(5) { animation-delay: 0.15s; }
+        .lamella:nth-child(6) { animation-delay: 0.18s; }
+        .lamella:nth-child(7) { animation-delay: 0.21s; }
+        .lamella:nth-child(8) { animation-delay: 0.24s; }
+        .lamella:nth-child(9) { animation-delay: 0.27s; }
+        .lamella:nth-child(10) { animation-delay: 0.30s; }
+        .lamella:nth-child(11) { animation-delay: 0.33s; }
+        .lamella:nth-child(12) { animation-delay: 0.36s; }
+        .lamella:nth-child(13) { animation-delay: 0.39s; }
+        .lamella:nth-child(14) { animation-delay: 0.42s; }
+        .lamella:nth-child(15) { animation-delay: 0.45s; }
+        .lamella:nth-child(16) { animation-delay: 0.48s; }
+        .lamella:nth-child(17) { animation-delay: 0.51s; }
+        .lamella:nth-child(18) { animation-delay: 0.54s; }
+        .lamella:nth-child(19) { animation-delay: 0.57s; }
+        .lamella:nth-child(20) { animation-delay: 0.60s; }
+        .lamella:nth-child(21) { animation-delay: 0.63s; }
+        .lamella:nth-child(22) { animation-delay: 0.66s; }
+        .lamella:nth-child(23) { animation-delay: 0.69s; }
+        .lamella:nth-child(24) { animation-delay: 0.72s; }
+        .lamella:nth-child(25) { animation-delay: 0.75s; }
+        .lamella:nth-child(26) { animation-delay: 0.78s; }
+        .lamella:nth-child(27) { animation-delay: 0.81s; }
+        .lamella:nth-child(28) { animation-delay: 0.84s; }
+        .lamella:nth-child(29) { animation-delay: 0.87s; }
+        .lamella:nth-child(30) { animation-delay: 0.90s; }
+        .lamella:nth-child(31) { animation-delay: 0.93s; }
+        .lamella:nth-child(32) { animation-delay: 0.96s; }
+        .lamella:nth-child(33) { animation-delay: 0.99s; }
+        .lamella:nth-child(34) { animation-delay: 1.02s; }
+        .lamella:nth-child(35) { animation-delay: 1.05s; }
+        .lamella:nth-child(36) { animation-delay: 1.08s; }
+        .lamella:nth-child(37) { animation-delay: 1.11s; }
+        .lamella:nth-child(38) { animation-delay: 1.14s; }
+        .lamella:nth-child(39) { animation-delay: 1.17s; }
+        .lamella:nth-child(40) { animation-delay: 1.20s; }
 
         /* Пульсация направляющих */
         @keyframes guidePulse {
