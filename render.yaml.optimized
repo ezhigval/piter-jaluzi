@@ -1,0 +1,112 @@
+services:
+  # Main web service with optimizations
+  - type: web
+    name: jaluxi-site
+    env: docker
+    plan: free
+    autoDeploy: true
+    
+    # Health check optimizations
+    healthCheckPath: /api/health
+    healthCheckTimeout: 1000
+    healthCheckGracePeriod: 10
+    
+    # Build optimizations
+    buildCommand: "docker build -f Dockerfile.optimized -t $REPOSITORY_NAME ."
+    dockerfilePath: ./Dockerfile.optimized
+    
+    # Runtime optimizations
+    numInstances: 1
+    scaling:
+      minInstances: 1
+      maxInstances: 1
+      targetMemoryPercent: 70
+      targetCPUPercent: 60
+    
+    # Environment variables
+    envVars:
+      - key: NODE_ENV
+        value: "production"
+      - key: BACKEND_PORT
+        value: "8080"
+      - key: PORT
+        value: "3000"
+      - key: ADMIN_PASSWORD
+        value: "admin"
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: jaluxi-db
+          property: connectionString
+    
+    # Performance optimizations
+    disk:
+      name: jaluxi-disk
+      mountPath: /app/data
+      sizeGB: 1
+    
+    # Resource limits (Free plan)
+    resourceProfile: free
+    
+    # Custom domains (if needed)
+    # domains:
+    #   - jaluxi.ru
+    
+    # Auto-deploy settings
+    autoDeploy: true
+    branch: main
+    
+    # Build context optimizations
+    buildContext: .
+    
+    # Health check advanced settings
+    healthCheck:
+      path: /api/health
+      protocol: http
+      port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+      successThreshold: 1
+
+  # PostgreSQL database
+  - type: pserv
+    name: jaluxi-db
+    plan: free
+    databaseName: jaluxi
+    user: jaluxi
+    
+    # Database optimizations
+    ipAllowList: [] # Allow all IPs for now
+    
+    # Backup settings
+    backups: true
+    
+    # Connection pooling
+    connectionPooling:
+      enabled: true
+      maxConnections: 10
+      minConnections: 1
+
+# Global settings
+global:
+  # Environment variables for all services
+  envVars:
+    - key: TZ
+      value: "UTC"
+    - key: LANG
+      value: "en_US.UTF-8"
+    - key: LC_ALL
+      value: "en_US.UTF-8"
+
+# Notifications (optional)
+notifications:
+  - type: email
+    email: admin@jaluxi.ru
+    events:
+      - deploy.started
+      - deploy.succeeded
+      - deploy.failed
+      - service.created
+      - service.deleted

@@ -1,0 +1,72 @@
+# Multi-stage optimized Dockerfile for production
+FROM node:20-alpine AS frontend-builder
+
+# Install dependencies only when needed
+WORKDIR /app/web
+COPY web/package*.json ./
+RUN npm ci --only=production --no-audit --no-fund
+
+# Copy source code and build
+COPY web/ ./
+RUN npm run build
+
+# Remove dev dependencies and cache
+RUN npm prune --production && npm cache clean --force
+
+# Go backend builder
+FROM golang:1.24-alpine AS backend-builder
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
+
+WORKDIR /app/backend
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download && go mod verify
+
+# Copy source and build with optimization flags
+COPY backend/ ./
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s -extldflags '-static'" \
+    -a -installsuffix cgo \
+    -o /app/server .
+
+# Final runtime image - minimal Alpine
+FROM alpine:latest AS runtime
+
+# Install only runtime dependencies
+RUN apk --no-cache add \
+    ca-certificates \
+    tzdata \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV BACKEND_PORT=8080
+ENV API_BASE_URL="http://127.0.0.1:8080"
+
+# Copy binaries with proper permissions
+COPY --from=backend-builder /app/server /app/server
+COPY --chown=nextjs:nodejs --from=frontend-builder /app/web/.next/standalone /app/web
+COPY --chown=nextjs:nodejs --from=frontend-builder /app/web/.next/static /app/web/.next/static
+COPY --chown=nextjs:nodejs --from=frontend-builder /app/web/public /app/web/public
+
+# Copy and optimize start script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh && chown nextjs:nodejs /app/start.sh
+
+# Switch to non-root user
+USER nextjs
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+
+EXPOSE 3000
+
+# Use optimized start script
+CMD ["/app/start.sh"]
