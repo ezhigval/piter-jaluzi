@@ -241,9 +241,18 @@ export default function AdminPage() {
       setHasUnsavedChanges(false)
       return
     }
+    
+    // Не перезаписывать draft если есть несохраненные изменения
+    if (hasUnsavedChanges) return
+    
+    // Не перезаписывать если текущая страница та же самая (сравниваем по lastModified)
+    if (pageDraft && pageDraft.id === selectedPage?.id && pageDraft.lastModified === selectedPage?.lastModified) {
+      return
+    }
+    
     setPageDraft(selectedPage)
     setHasUnsavedChanges(false)
-  }, [selectedPageId, selectedPage])
+  }, [selectedPageId, selectedPage, hasUnsavedChanges, pageDraft])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -385,8 +394,12 @@ export default function AdminPage() {
       return
     }
 
-    await fetchPages()
+    // Обновляем pageDraft сохраненными данными, а не перезагружаем с сервера
+    setPageDraft(data.data)
     setHasUnsavedChanges(false)
+    
+    // Фоновое обновление списка страниц без сброса текущего редактирования
+    fetchPages()
   }
 
   const addMaterial = async () => {
