@@ -17,8 +17,11 @@ export default function LoadingAnimation() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Фон сайта (затемнен) */}
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+      {/* Сайт виден под жалюзи */}
+      <div className="absolute inset-0 bg-white">
+        {/* Затемнение сайта во время анимации */}
+        <div className="absolute inset-0 bg-black/30 transition-opacity duration-1000"></div>
+      </div>
       
       {/* Контейнер с жалюзи */}
       <div className="relative w-full h-full">
@@ -29,7 +32,7 @@ export default function LoadingAnimation() {
         </div>
 
         {/* Жалюзи закрывают весь экран */}
-        <div className="absolute inset-0 flex flex-col-reverse">
+        <div className="absolute inset-0 flex flex-col">
           {[...Array(40)].map((_, index) => (
             <div
               key={index}
@@ -38,6 +41,7 @@ export default function LoadingAnimation() {
                 '--delay': `${index * 0.03}s`,
                 '--duration': '0.8s',
                 '--initial-height': `${100 / 40}%`,
+                '--from-bottom': `${index * 2.5}px`, // Начальная позиция снизу
               } as React.CSSProperties}
             >
               <div className="lamella-inner">
@@ -117,7 +121,7 @@ export default function LoadingAnimation() {
           border-radius: 1px;
           position: relative;
           overflow: hidden;
-          transform: translateY(0) rotateX(0deg);
+          transform: translateY(var(--from-bottom)) rotateX(0deg);
           animation: lamellaOpen var(--duration) cubic-bezier(0.4, 0, 0.2, 1) var(--delay) forwards;
           box-shadow: 
             0 1px 3px rgba(0, 0, 0, 0.5),
@@ -174,27 +178,27 @@ export default function LoadingAnimation() {
 
         @keyframes lamellaOpen {
           0% {
-            transform: translateY(0) rotateX(0deg) scaleY(1);
+            transform: translateY(var(--from-bottom)) rotateX(0deg) scaleY(1);
             opacity: 1;
             height: var(--initial-height);
           }
           30% {
-            transform: translateY(-20px) rotateX(-5deg) scaleY(0.95);
+            transform: translateY(calc(var(--from-bottom) - 20px)) rotateX(-5deg) scaleY(0.95);
             opacity: 1;
             height: var(--initial-height);
           }
           60% {
-            transform: translateY(-60px) rotateX(-15deg) scaleY(0.8);
+            transform: translateY(calc(var(--from-bottom) - 60px)) rotateX(-15deg) scaleY(0.8);
             opacity: 0.8;
             height: calc(var(--initial-height) * 0.8);
           }
           85% {
-            transform: translateY(-120px) rotateX(-25deg) scaleY(0.6);
+            transform: translateY(calc(var(--from-bottom) - 120px)) rotateX(-25deg) scaleY(0.6);
             opacity: 0.4;
             height: calc(var(--initial-height) * 0.6);
           }
           100% {
-            transform: translateY(-200px) rotateX(-35deg) scaleY(0.4);
+            transform: translateY(calc(var(--from-bottom) - 200px)) rotateX(-35deg) scaleY(0.4);
             opacity: 0;
             height: calc(var(--initial-height) * 0.4);
           }

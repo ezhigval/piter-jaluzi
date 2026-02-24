@@ -8,12 +8,16 @@ interface LayoutWithLoadingProps {
 }
 
 export default function LayoutWithLoading({ children }: LayoutWithLoadingProps) {
-  const { isLoading } = useLoadingAnimation(3500) // 3.5 секунды для новой анимации
+  const { isLoading } = useLoadingAnimation(3500) // 3.5 секунды для анимации
 
   return (
     <>
       {isLoading && <LoadingAnimation />}
-      <div style={{ opacity: isLoading ? 0 : 1, transition: 'opacity 0.8s ease-in-out' }}>
+      <div style={{ 
+        opacity: isLoading ? 0 : 1, 
+        transition: 'opacity 0.8s ease-in-out',
+        visibility: isLoading ? 'hidden' : 'visible'
+      }}>
         {children}
       </div>
     </>
