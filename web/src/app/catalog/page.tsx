@@ -128,7 +128,19 @@ export default function CatalogPage() {
   }
 
   const filteredMaterials = selectedCategory
-    ? materials.filter(m => m.category.toLowerCase().includes(selectedCategory))
+    ? materials.filter(m => {
+        const materialCategory = m.category.toLowerCase()
+        switch (selectedCategory.toLowerCase()) {
+          case 'horizontal':
+            return materialCategory.includes('профили') || materialCategory.includes('ламели')
+          case 'vertical':
+            return materialCategory.includes('ткани')
+          case 'roller':
+            return materialCategory.includes('ткани')
+          default:
+            return false
+        }
+      })
     : []
 
   // If no category selected, show category selection
@@ -293,6 +305,67 @@ export default function CatalogPage() {
             <div className="mt-4 text-sm text-gray-600 text-center">
               Визуализация обновляется в реальном времени
             </div>
+            
+            {/* Material Parameters Display */}
+            {blindsConfig.material && (
+              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-3">Параметры материала</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-600">Материал:</span>
+                    <p className="font-medium text-gray-900">{blindsConfig.material.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Цвет:</span>
+                    <p className="font-medium text-gray-900">{blindsConfig.material.color}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Светопропускаемость:</span>
+                    <p className="font-medium text-gray-900">{blindsConfig.material.lightTransmission}%</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Цена за м²:</span>
+                    <p className="font-medium text-gray-900">{blindsConfig.material.pricePerM2} ₽</p>
+                  </div>
+                  {(blindsConfig.material as any).composition && (
+                    <div>
+                      <span className="text-gray-600">Состав:</span>
+                      <p className="font-medium text-gray-900">{(blindsConfig.material as any).composition}</p>
+                    </div>
+                  )}
+                  {(blindsConfig.material as any).density && (
+                    <div>
+                      <span className="text-gray-600">Плотность:</span>
+                      <p className="font-medium text-gray-900">{(blindsConfig.material as any).density}</p>
+                    </div>
+                  )}
+                  {(blindsConfig.material as any).thickness && (
+                    <div>
+                      <span className="text-gray-600">Толщина:</span>
+                      <p className="font-medium text-gray-900">{(blindsConfig.material as any).thickness}</p>
+                    </div>
+                  )}
+                  {(blindsConfig.material as any).width && (
+                    <div>
+                      <span className="text-gray-600">Ширина:</span>
+                      <p className="font-medium text-gray-900">{(blindsConfig.material as any).width}</p>
+                    </div>
+                  )}
+                  {(blindsConfig.material as any).features && (blindsConfig.material as any).features.length > 0 && (
+                    <div className="col-span-2">
+                      <span className="text-gray-600">Особенности:</span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(blindsConfig.material as any).features.map((feature: string, index: number) => (
+                          <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
