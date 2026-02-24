@@ -33,7 +33,9 @@ export const users: User[] = [
       'materials.edit', 
       'reviews.read',
       'reviews.edit',
-      'pricing.read'
+      'pricing.read',
+      'portfolio.read',
+      'portfolio.edit'
     ],
     isActive: true,
     createdAt: Date.now()
@@ -46,7 +48,8 @@ export const users: User[] = [
     permissions: [
       'materials.read',
       'reviews.read',
-      'pricing.read'
+      'pricing.read',
+      'portfolio.read'
     ],
     isActive: true,
     createdAt: Date.now()
@@ -74,6 +77,11 @@ export const PERMISSIONS = {
     READ: 'content.read',
     EDIT: 'content.edit',
     DELETE: 'content.delete'
+  },
+  PORTFOLIO: {
+    READ: 'portfolio.read',
+    EDIT: 'portfolio.edit',
+    DELETE: 'portfolio.delete'
   },
   CONFIG: {
     READ: 'config.read',

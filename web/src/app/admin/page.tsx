@@ -62,6 +62,23 @@ interface PricingConfig {
   complexityFactor: number
 }
 
+interface PortfolioItem {
+  id: string
+  title: string
+  description: string
+  category: 'horizontal' | 'vertical' | 'roller' | 'repair'
+  images: string[]
+  beforeAfter?: {
+    before: string
+    after: string
+  }
+  tags: string[]
+  featured: boolean
+  createdAt: string
+  modifiedAt: string
+  createdBy: string
+}
+
 type PageBlockType = 'hero' | 'text' | 'image' | 'features' | 'testimonials' | 'cta' | 'gallery'
 
 interface PageBlock {
@@ -88,7 +105,7 @@ interface PageContent {
   seo?: SEOData
 }
 
-type TabKey = 'pages' | 'materials' | 'reviews' | 'pricing'
+type TabKey = 'pages' | 'materials' | 'reviews' | 'pricing' | 'portfolio'
 
 function safeJsonParse(value: string): { ok: true; data: any } | { ok: false; error: string } {
   try {
@@ -133,6 +150,21 @@ export default function AdminPage() {
     measurementFee: 800,
     materialBasePrice: 800,
     complexityFactor: 1.2,
+  })
+
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([])
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string | null>(null)
+  const selectedPortfolioItem = useMemo(() => portfolio.find((p) => p.id === selectedPortfolioId) ?? null, [portfolio, selectedPortfolioId])
+  const [portfolioDraft, setPortfolioDraft] = useState<PortfolioItem | null>(null)
+  const [portfolioDirty, setPortfolioDirty] = useState(false)
+  const [showAddPortfolio, setShowAddPortfolio] = useState(false)
+  const [newPortfolioItem, setNewPortfolioItem] = useState<Partial<PortfolioItem>>({
+    title: '',
+    description: '',
+    category: 'horizontal',
+    images: [],
+    tags: [],
+    featured: false
   })
 
   const [showAddMaterial, setShowAddMaterial] = useState(false)
@@ -205,6 +237,12 @@ export default function AdminPage() {
     setPricingConfig(data ?? pricingConfig)
   }, [pricingConfig])
 
+  const fetchPortfolio = useCallback(async () => {
+    const res = await fetch('/api/portfolio')
+    const data = await res.json()
+    setPortfolio(data?.data ?? [])
+  }, [])
+
   const bootstrap = useCallback(async () => {
     try {
       const u = await fetchSession()
@@ -215,11 +253,12 @@ export default function AdminPage() {
       if (u.permissions.includes('*') || u.permissions.includes('materials.read')) tasks.push(fetchMaterials())
       if (u.permissions.includes('*') || u.permissions.includes('reviews.read')) tasks.push(fetchReviews())
       if (u.permissions.includes('*') || u.permissions.includes('pricing.read')) tasks.push(fetchPricing())
+      if (u.permissions.includes('*') || u.permissions.includes('portfolio.read')) tasks.push(fetchPortfolio())
       await Promise.all(tasks)
     } finally {
       setLoading(false)
     }
-  }, [fetchMaterials, fetchPages, fetchPricing, fetchReviews, fetchSession])
+  }, [fetchMaterials, fetchPages, fetchPricing, fetchReviews, fetchPortfolio, fetchSession])
 
   useEffect(() => {
     bootstrap()
@@ -253,6 +292,25 @@ export default function AdminPage() {
     setPageDraft(selectedPage)
     setHasUnsavedChanges(false)
   }, [selectedPageId, selectedPage, hasUnsavedChanges, pageDraft])
+
+  useEffect(() => {
+    if (!selectedPortfolioId) {
+      setPortfolioDraft(null)
+      setPortfolioDirty(false)
+      return
+    }
+    
+    // Не перезаписывать draft если есть несохраненные изменения
+    if (portfolioDirty) return
+    
+    // Не перезаписывать если текущий элемент тот же самый
+    if (portfolioDraft && portfolioDraft.id === selectedPortfolioItem?.id && portfolioDraft.modifiedAt === selectedPortfolioItem?.modifiedAt) {
+      return
+    }
+    
+    setPortfolioDraft(selectedPortfolioItem)
+    setPortfolioDirty(false)
+  }, [selectedPortfolioId, selectedPortfolioItem, portfolioDirty, portfolioDraft])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -548,6 +606,91 @@ export default function AdminPage() {
     alert('Сохранено')
   }
 
+  const savePortfolioItem = async () => {
+    if (!portfolioDraft) return
+    if (!hasPerm('portfolio.edit')) {
+      alert('Недостаточно прав')
+      return
+    }
+
+    const res = await fetch('/api/portfolio', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(portfolioDraft),
+    })
+
+    const data = await res.json()
+    if (!res.ok || !data?.success) {
+      alert(data?.error ?? 'Ошибка сохранения')
+      return
+    }
+
+    setPortfolioDraft(data.data)
+    setPortfolioDirty(false)
+    fetchPortfolio()
+  }
+
+  const addPortfolioItem = async () => {
+    if (!hasPerm('portfolio.edit')) {
+      alert('Недостаточно прав')
+      return
+    }
+
+    const res = await fetch('/api/portfolio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newPortfolioItem),
+    })
+
+    const data = await res.json()
+    if (!res.ok || !data?.success) {
+      alert(data?.error ?? 'Ошибка')
+      return
+    }
+
+    setPortfolio((prev) => [...prev, data.data])
+    setShowAddPortfolio(false)
+    setNewPortfolioItem({
+      title: '',
+      description: '',
+      category: 'horizontal',
+      images: [],
+      tags: [],
+      featured: false
+    })
+  }
+
+  const deletePortfolioItem = async (id: string) => {
+    if (!hasPerm('portfolio.delete')) {
+      alert('Недостаточно прав')
+      return
+    }
+
+    if (!confirm('Удалить работу из портфолио?')) return
+
+    const res = await fetch(`/api/portfolio?id=${id}`, {
+      method: 'DELETE',
+    })
+
+    const data = await res.json()
+    if (!res.ok || !data?.success) {
+      alert(data?.error ?? 'Ошибка удаления')
+      return
+    }
+
+    setPortfolio((prev) => prev.filter((item) => item.id !== id))
+    if (selectedPortfolioId === id) {
+      setSelectedPortfolioId(null)
+      setPortfolioDraft(null)
+    }
+  }
+
+  const updatePortfolioDraft = (updates: Partial<PortfolioItem>) => {
+    if (!portfolioDraft) return
+    setPortfolioDraft({ ...portfolioDraft, ...updates })
+    setPortfolioDirty(true)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -731,6 +874,18 @@ export default function AdminPage() {
                   }
                 >
                   Ценообразование
+                </button>
+              )}
+              {(hasPerm('portfolio.read') || hasPerm('portfolio.edit')) && (
+                <button
+                  onClick={() => setActiveTab('portfolio')}
+                  className={
+                    activeTab === 'portfolio'
+                      ? 'py-4 px-6 border-b-2 border-blue-500 text-blue-600 font-medium text-sm whitespace-nowrap'
+                      : 'py-4 px-6 border-b-2 border-transparent text-gray-600 hover:text-gray-800 font-medium text-sm whitespace-nowrap'
+                  }
+                >
+                  Портфолио ({portfolio.length})
                 </button>
               )}
             </nav>
@@ -1334,6 +1489,241 @@ export default function AdminPage() {
                     Сохранить
                   </button>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'portfolio' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">Портфолио</h2>
+                    {hasPerm('portfolio.edit') && (
+                      <button
+                        onClick={() => setShowAddPortfolio(true)}
+                        className="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                      >
+                        + Добавить
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {portfolio.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedPortfolioId === item.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => setSelectedPortfolioId(item.id)}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium text-gray-900">{item.title}</h4>
+                            <p className="text-sm text-gray-600">{item.category}</p>
+                            {item.featured && (
+                              <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full mt-1">
+                                ⭐ Избранное
+                              </span>
+                            )}
+                          </div>
+                          {hasPerm('portfolio.delete') && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deletePortfolioItem(item.id)
+                              }}
+                              className="text-red-600 hover:text-red-800 text-sm"
+                            >
+                              Удалить
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="lg:col-span-2">
+                  {!portfolioDraft ? (
+                    <div className="text-center py-12 text-gray-600">Выберите работу для редактирования</div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Название</label>
+                          <input
+                            value={portfolioDraft.title}
+                            onChange={(e) => updatePortfolioDraft({ title: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={!hasPerm('portfolio.edit')}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Категория</label>
+                          <select
+                            value={portfolioDraft.category}
+                            onChange={(e) => updatePortfolioDraft({ category: e.target.value as any })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled={!hasPerm('portfolio.edit')}
+                          >
+                            <option value="horizontal">Горизонтальные</option>
+                            <option value="vertical">Вертикальные</option>
+                            <option value="roller">Рулонные</option>
+                            <option value="repair">Ремонт</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Описание</label>
+                        <textarea
+                          value={portfolioDraft.description}
+                          onChange={(e) => updatePortfolioDraft({ description: e.target.value })}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={!hasPerm('portfolio.edit')}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Изображения (URL, по одному на строку)</label>
+                        <textarea
+                          value={portfolioDraft.images.join('\n')}
+                          onChange={(e) => updatePortfolioDraft({ images: e.target.value.split('\n').filter(url => url.trim()) })}
+                          rows={4}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={!hasPerm('portfolio.edit')}
+                          placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Теги (через запятую)</label>
+                        <input
+                          value={portfolioDraft.tags.join(', ')}
+                          onChange={(e) => updatePortfolioDraft({ tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          disabled={!hasPerm('portfolio.edit')}
+                          placeholder="алюминий, белый, современный стиль"
+                        />
+                      </div>
+
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="featured"
+                          checked={portfolioDraft.featured}
+                          onChange={(e) => updatePortfolioDraft({ featured: e.target.checked })}
+                          className="mr-2"
+                          disabled={!hasPerm('portfolio.edit')}
+                        />
+                        <label htmlFor="featured" className="text-sm font-medium text-gray-700">
+                          Показать в избранных
+                        </label>
+                      </div>
+
+                      {hasPerm('portfolio.edit') && (
+                        <button onClick={savePortfolioItem} className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                          Сохранить
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Add Portfolio Modal */}
+            {showAddPortfolio && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+                  <h3 className="text-lg font-semibold mb-4">Добавить работу в портфолио</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Название</label>
+                      <input
+                        value={newPortfolioItem.title ?? ''}
+                        onChange={(e) => setNewPortfolioItem(p => ({ ...p, title: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Категория</label>
+                      <select
+                        value={newPortfolioItem.category}
+                        onChange={(e) => setNewPortfolioItem(p => ({ ...p, category: e.target.value as any }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="horizontal">Горизонтальные</option>
+                        <option value="vertical">Вертикальные</option>
+                        <option value="roller">Рулонные</option>
+                        <option value="repair">Ремонт</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Описание</label>
+                      <textarea
+                        value={newPortfolioItem.description ?? ''}
+                        onChange={(e) => setNewPortfolioItem(p => ({ ...p, description: e.target.value }))}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Изображения (URL, по одному на строку)</label>
+                      <textarea
+                        value={newPortfolioItem.images?.join('\n') ?? ''}
+                        onChange={(e) => setNewPortfolioItem(p => ({ ...p, images: e.target.value.split('\n').filter(url => url.trim()) }))}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Теги (через запятую)</label>
+                      <input
+                        value={newPortfolioItem.tags?.join(', ') ?? ''}
+                        onChange={(e) => setNewPortfolioItem(p => ({ ...p, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="алюминий, белый, современный стиль"
+                      />
+                    </div>
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="new-featured"
+                        checked={newPortfolioItem.featured ?? false}
+                        onChange={(e) => setNewPortfolioItem(p => ({ ...p, featured: e.target.checked }))}
+                        className="mr-2"
+                      />
+                      <label htmlFor="new-featured" className="text-sm font-medium text-gray-700">
+                        Показать в избранных
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 mt-6">
+                    <button
+                      onClick={() => setShowAddPortfolio(false)}
+                      className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={addPortfolioItem}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      Добавить
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
