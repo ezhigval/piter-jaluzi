@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withPermission, AuthenticatedRequest } from '@/lib/admin-middleware'
 import { PERMISSIONS } from '@/app/api/auth/users/route'
-import { listPages, updatePage } from '@/lib/pages-store'
-
-const getPagesData = () => listPages()
+import { listPages, updatePage } from '@/lib/pages-store-persistent'
 
 export const GET = withPermission(PERMISSIONS.CONTENT.READ)(
   async (req: AuthenticatedRequest) => {
@@ -13,10 +11,12 @@ export const GET = withPermission(PERMISSIONS.CONTENT.READ)(
         role: req.user?.role 
       })
 
+      const pages = await listPages()
+      
       return NextResponse.json({
         success: true,
-        data: getPagesData(),
-        total: getPagesData().length
+        data: pages,
+        total: pages.length
       })
 
     } catch (error) {
@@ -41,7 +41,7 @@ export const PUT = withPermission(PERMISSIONS.CONTENT.EDIT)(
         )
       }
 
-      const updated = updatePage({
+      const updated = await updatePage({
         pageId,
         title,
         description,
