@@ -25,7 +25,7 @@ function escapeTelegram(text: string): string {
 export async function POST(req: NextRequest) {
   try {
     const token = requireEnv('TELEGRAM_BOT_TOKEN')
-    const subscribers = Array.from(getTelegramSubscribers())
+    const subscribers = await getTelegramSubscribers()
 
     const payload = (await req.json()) as Partial<LeadPayload>
 

@@ -1,0 +1,758 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"log"
+	"math"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httprate"
+	"github.com/go-playground/validator/v10"
+	"github.com/rs/cors"
+	"github.com/unrolled/secure"
+)
+
+type AppConfig struct {
+	Port string
+}
+
+type App struct {
+	Router   *chi.Mux
+	Validate *validator.Validate
+	Config   AppConfig
+
+	storage *persistentStore
+}
+
+type ProductType string
+
+const (
+	ProductTypeHorizontal ProductType = "horizontal"
+	ProductTypeVertical   ProductType = "vertical"
+	ProductTypeRoller     ProductType = "roller"
+)
+
+type Material struct {
+	ID                int64   `json:"id"`
+	SupplierCode      string  `json:"supplierCode"`
+	Name              string  `json:"name"`
+	Category          string  `json:"category"`
+	Color             string  `json:"color,omitempty"`
+	LightTransmission int     `json:"lightTransmission"` // Светопропускаемость в процентах (0-100)
+	PricePerM2        float64 `json:"pricePerM2"`
+	ImageURL          string  `json:"imageUrl,omitempty"`
+}
+
+type Promotion struct {
+	ID          int64  `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Badge       string `json:"badge,omitempty"`
+}
+
+type PricingConfig struct {
+	FrameMarkup      float64 `json:"frameMarkup"`      // Коэффициент стоимости каркаса (30% = 0.3)
+	ProductionMarkup float64 `json:"productionMarkup"` // Наценка производства (50% = 0.5)
+	MinAreaM2        float64 `json:"minAreaM2"`        // Минимальная площадь в м²
+}
+
+type SiteContent struct {
+	ID          int64  `json:"id"`
+	Page        string `json:"page"`        // страница (home, about, contacts, etc.)
+	Section     string `json:"section"`     // секция (hero, features, cta, etc.)
+	ContentType string `json:"contentType"` // тип (text, color, block)
+	Key         string `json:"key"`         // ключ (title, description, background, etc.)
+	Value       string `json:"value"`       // значение
+	IsActive    bool   `json:"isActive"`    // активен ли блок
+}
+
+type SiteConfig struct {
+	PrimaryColor   string `json:"primaryColor"`
+	SecondaryColor string `json:"secondaryColor"`
+	AccentColor    string `json:"accentColor"`
+	CompanyName    string `json:"companyName"`
+	CompanyPhone   string `json:"companyPhone"`
+	CompanyEmail   string `json:"companyEmail"`
+	CompanyAddress string `json:"companyAddress"`
+}
+
+type Review struct {
+	ID        int64     `json:"id"`
+	Name      string    `json:"name" validate:"required,min=2,max=80"`
+	Rating    int       `json:"rating" validate:"required,min=1,max=5"`
+	Comment   string    `json:"comment" validate:"required,min=10,max=1000"`
+	ImageURL  string    `json:"imageUrl,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type PriceEstimateRequest struct {
+	WidthMm     int         `json:"widthMm" validate:"required,gt=0,lte=4000"`
+	HeightMm    int         `json:"heightMm" validate:"required,gt=0,lte=3000"`
+	ProductType ProductType `json:"productType" validate:"required,oneof=horizontal vertical roller"`
+	MaterialID  int64       `json:"materialId" validate:"required,gt=0"`
+}
+
+type PriceEstimateResponse struct {
+	Price     float64 `json:"price"`
+	Currency  string  `json:"currency"`
+	AreaM2    float64 `json:"areaM2"`
+	Breakdown string  `json:"breakdown"`
+}
+
+type DatabaseStore struct {
+	db       *sql.DB
+	validate *validator.Validate
+}
+
+func newDatabaseStore(dbURL string) (*DatabaseStore, error) {
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	store := &DatabaseStore{
+		db:       db,
+		validate: validator.New(),
+	}
+
+	// Run migrations
+	if err := store.runMigrations(); err != nil {
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	return store, nil
+}
+
+func (s *DatabaseStore) Close() error {
+	return s.db.Close()
+}
+
+func (s *persistentStore) getMaterials() []Material {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]Material(nil), s.materials...)
+}
+
+func (s *persistentStore) findMaterial(id int64) *Material {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for i := range s.materials {
+		if s.materials[i].ID == id {
+			m := s.materials[i]
+			return &m
+		}
+	}
+	return nil
+}
+
+func (s *persistentStore) getPromotions() []Promotion {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]Promotion(nil), s.promotions...)
+}
+
+func (s *persistentStore) getReviews() []Review {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]Review(nil), s.reviews...)
+}
+
+func (s *persistentStore) getPricingConfig() PricingConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.pricingConfig
+}
+
+func (s *persistentStore) updatePricingConfig(config PricingConfig) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.pricingConfig = config
+	// Автосохранение после обновления конфигурации
+	go s.saveData()
+}
+
+func (s *persistentStore) addMaterial(material Material) Material {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	material.ID = s.nextID
+	s.nextID++
+	s.materials = append(s.materials, material)
+	// Автосохранение после добавления материала
+	go s.saveData()
+	return material
+}
+
+func (s *persistentStore) updateMaterial(material Material) *Material {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.materials {
+		if s.materials[i].ID == material.ID {
+			s.materials[i] = material
+			// Автосохранение после обновления материала
+			go s.saveData()
+			return &s.materials[i]
+		}
+	}
+	return nil
+}
+
+func (s *persistentStore) deleteMaterial(id int64) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.materials {
+		if s.materials[i].ID == id {
+			s.materials = append(s.materials[:i], s.materials[i+1:]...)
+			// Автосохранение после удаления материала
+			go s.saveData()
+			return true
+		}
+	}
+	return false
+}
+
+func (s *persistentStore) getSiteContent() []SiteContent {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]SiteContent(nil), s.siteContent...)
+}
+
+func (s *persistentStore) getSiteContentByPage(page string) []SiteContent {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var result []SiteContent
+	for _, content := range s.siteContent {
+		if content.Page == page && content.IsActive {
+			result = append(result, content)
+		}
+	}
+	return result
+}
+
+func (s *persistentStore) updateSiteContent(content SiteContent) *SiteContent {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.siteContent {
+		if s.siteContent[i].ID == content.ID {
+			s.siteContent[i] = content
+			// Автосохранение после обновления контента
+			go s.saveData()
+			return &s.siteContent[i]
+		}
+	}
+	return nil
+}
+
+func (s *persistentStore) addSiteContent(content SiteContent) SiteContent {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	content.ID = s.nextID
+	s.nextID++
+	s.siteContent = append(s.siteContent, content)
+	// Автосохранение после добавления контента
+	go s.saveData()
+	return content
+}
+
+func (s *persistentStore) getSiteConfig() SiteConfig {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.siteConfig
+}
+
+func (s *persistentStore) updateSiteConfig(config SiteConfig) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.siteConfig = config
+	// Автосохранение после обновления конфигурации сайта
+	go s.saveData()
+}
+
+func (s *persistentStore) getTelegramSubscribers() []int64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]int64(nil), s.telegramSubscribers...)
+}
+
+func (s *persistentStore) addTelegramSubscriber(chatID int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Проверяем, не подписан ли уже
+	for _, id := range s.telegramSubscribers {
+		if id == chatID {
+			return
+		}
+	}
+
+	s.telegramSubscribers = append(s.telegramSubscribers, chatID)
+	// Автосохранение после добавления подписчика
+	go s.saveData()
+}
+
+func (s *persistentStore) removeTelegramSubscriber(chatID int64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, id := range s.telegramSubscribers {
+		if id == chatID {
+			s.telegramSubscribers = append(s.telegramSubscribers[:i], s.telegramSubscribers[i+1:]...)
+			// Автосохранение после удаления подписчика
+			go s.saveData()
+			return
+		}
+	}
+}
+
+func main() {
+	cfg := AppConfig{
+		Port: getEnv("BACKEND_PORT", getEnv("PORT", "8080")),
+	}
+
+	app := &App{
+		Router:   chi.NewRouter(),
+		Validate: validator.New(),
+		Config:   cfg,
+		storage:  newPersistentStore(getEnv("DATA_DIR", "./data")),
+	}
+
+	app.setupMiddleware()
+	app.registerRoutes()
+
+	server := &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           app.Router,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	log.Printf("Jaluxi backend listening on :%s", cfg.Port)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("server error: %v", err)
+	}
+}
+
+func (a *App) setupMiddleware() {
+	secureMiddleware := secure.New(secure.Options{
+		FrameDeny:             true,
+		BrowserXssFilter:      true,
+		ContentTypeNosniff:    true,
+		ReferrerPolicy:        "strict-origin-when-cross-origin",
+		ContentSecurityPolicy: "default-src 'self'; img-src 'self' data:; script-src 'self'; style-src 'self' 'unsafe-inline';",
+	})
+
+	a.Router.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := secureMiddleware.Process(w, r); err != nil {
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
+
+	// Basic global rate limit (per IP)
+	a.Router.Use(httprate.LimitByIP(200, time.Minute))
+
+	// CORS – adapted at deploy time if needed
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type"},
+		AllowCredentials: false,
+	})
+	a.Router.Use(corsMiddleware.Handler)
+}
+
+func (a *App) registerRoutes() {
+	a.Router.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
+
+	a.Router.Route("/api", func(r chi.Router) {
+		// Lightweight rate limiting on write endpoints.
+		r.Group(func(r chi.Router) {
+			r.Use(httprate.LimitByIP(20, time.Minute))
+			r.Post("/reviews", a.handleCreateReview())
+		})
+
+		// Admin endpoints with stricter rate limiting
+		r.Group(func(r chi.Router) {
+			r.Use(httprate.LimitByIP(10, time.Minute))
+			r.Get("/pricing", a.handleGetPricingConfig())
+			r.Put("/pricing", a.handleUpdatePricingConfig())
+			r.Post("/materials", a.handleCreateMaterial())
+			r.Put("/materials/{id}", a.handleUpdateMaterial())
+			r.Delete("/materials/{id}", a.handleDeleteMaterial())
+
+			// Site content management
+			r.Get("/content", a.handleGetSiteContent())
+			r.Get("/content/{page}", a.handleGetSiteContentByPage())
+			r.Put("/content/{id}", a.handleUpdateSiteContent())
+			r.Post("/content", a.handleCreateSiteContent())
+
+			// Site config
+			r.Get("/config", a.handleGetSiteConfig())
+			r.Put("/config", a.handleUpdateSiteConfig())
+
+			// Telegram subscribers management
+			r.Get("/telegram/subscribers", a.handleGetTelegramSubscribers())
+			r.Post("/telegram/subscribers/{chatId}", a.handleAddTelegramSubscriber())
+			r.Delete("/telegram/subscribers/{chatId}", a.handleRemoveTelegramSubscriber())
+		})
+
+		r.Get("/catalog", a.handleCatalog())
+		r.Get("/promotions", a.handlePromotions())
+		r.Get("/reviews", a.handleReviews())
+		r.Post("/estimate", a.handleEstimate())
+	})
+
+	// Static frontend bundle (Next.js export) – path can be overridden via env.
+	staticDir := getEnv("FRONTEND_DIR", "./web/out")
+	fileServer := http.FileServer(http.Dir(staticDir))
+	a.Router.Handle("/*", fileServer)
+}
+
+func getEnv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if payload == nil {
+		return
+	}
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func (a *App) handleCatalog() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		mats := a.storage.getMaterials()
+		writeJSON(w, http.StatusOK, mats)
+	}
+}
+
+func (a *App) handlePromotions() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		promos := a.storage.getPromotions()
+		writeJSON(w, http.StatusOK, promos)
+	}
+}
+
+func (a *App) handleReviews() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		reviews := a.storage.getReviews()
+		writeJSON(w, http.StatusOK, reviews)
+	}
+}
+
+func (a *App) handleCreateReview() http.HandlerFunc {
+	type input struct {
+		Name     string `json:"name" validate:"required,min=2,max=80"`
+		Rating   int    `json:"rating" validate:"required,min=1,max=5"`
+		Comment  string `json:"comment" validate:"required,min=10,max=1000"`
+		ImageURL string `json:"imageUrl,omitempty"`
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		var in input
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+
+		if err := a.Validate.Struct(in); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation failed"})
+			return
+		}
+
+		review := Review{
+			Name:      in.Name,
+			Rating:    in.Rating,
+			Comment:   in.Comment,
+			ImageURL:  in.ImageURL,
+			CreatedAt: time.Now().UTC(),
+		}
+		created := a.storage.addReview(review)
+		writeJSON(w, http.StatusCreated, created)
+	}
+}
+
+func (a *App) handleEstimate() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var in PriceEstimateRequest
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+
+		if err := a.Validate.Struct(in); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation failed"})
+			return
+		}
+
+		material := a.storage.findMaterial(in.MaterialID)
+		if material == nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "material not found"})
+			return
+		}
+
+		config := a.storage.getPricingConfig()
+
+		widthM := float64(in.WidthMm) / 1000.0
+		heightM := float64(in.HeightMm) / 1000.0
+		area := widthM * heightM
+		if area < config.MinAreaM2 {
+			area = config.MinAreaM2
+		}
+
+		// Базовая стоимость: площадь × стоимость м² материала
+		materialCost := area * material.PricePerM2
+
+		// Добавляем стоимость каркаса (30% от стоимости материала)
+		frameCost := materialCost * config.FrameMarkup
+
+		// Себестоимость: материал + каркас
+		costPrice := materialCost + frameCost
+
+		// Добавляем наценку производства (50% от себестоимости)
+		productionCost := costPrice * config.ProductionMarkup
+
+		// Итоговая стоимость: себестоимость + наценка производства
+		total := costPrice + productionCost
+
+		// Округляем до 10 рублей
+		total = math.Round(total/10) * 10
+
+		resp := PriceEstimateResponse{
+			Price:    total,
+			Currency: "₽",
+			AreaM2:   area,
+			Breakdown: fmt.Sprintf("Площадь: %.2f м² × %d ₽/м² = %.0f ₽ (материал) + %.0f ₽ (каркас %.0f%%) + %.0f ₽ (наценка %.0f%%) = %.0f ₽",
+				area, int(material.PricePerM2), materialCost, frameCost, config.FrameMarkup*100,
+				productionCost, config.ProductionMarkup*100, total),
+		}
+
+		writeJSON(w, http.StatusOK, resp)
+	}
+}
+
+func (a *App) handleGetPricingConfig() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		config := a.storage.getPricingConfig()
+		writeJSON(w, http.StatusOK, config)
+	}
+}
+
+func (a *App) handleUpdatePricingConfig() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var config PricingConfig
+		if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+
+		if err := a.Validate.Struct(config); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation failed"})
+			return
+		}
+
+		a.storage.updatePricingConfig(config)
+		writeJSON(w, http.StatusOK, config)
+	}
+}
+
+func (a *App) handleCreateMaterial() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var material Material
+		if err := json.NewDecoder(r.Body).Decode(&material); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+
+		if err := a.Validate.Struct(material); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation failed"})
+			return
+		}
+
+		created := a.storage.addMaterial(material)
+		writeJSON(w, http.StatusCreated, created)
+	}
+}
+
+func (a *App) handleUpdateMaterial() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := chi.URLParam(r, "id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid material ID"})
+			return
+		}
+
+		var material Material
+		if err := json.NewDecoder(r.Body).Decode(&material); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+
+		if err := a.Validate.Struct(material); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation failed"})
+			return
+		}
+
+		material.ID = id
+		updated := a.storage.updateMaterial(material)
+		if updated == nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "material not found"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, updated)
+	}
+}
+
+func (a *App) handleDeleteMaterial() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := chi.URLParam(r, "id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid material ID"})
+			return
+		}
+
+		if !a.storage.deleteMaterial(id) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "material not found"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	}
+}
+
+func (a *App) handleGetSiteContent() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		content := a.storage.getSiteContent()
+		writeJSON(w, http.StatusOK, content)
+	}
+}
+
+func (a *App) handleGetSiteContentByPage() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		page := chi.URLParam(r, "page")
+		content := a.storage.getSiteContentByPage(page)
+		writeJSON(w, http.StatusOK, content)
+	}
+}
+
+func (a *App) handleUpdateSiteContent() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idStr := chi.URLParam(r, "id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid content ID"})
+			return
+		}
+
+		var content SiteContent
+		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+
+		content.ID = id
+		updated := a.storage.updateSiteContent(content)
+		if updated == nil {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "content not found"})
+			return
+		}
+
+		writeJSON(w, http.StatusOK, updated)
+	}
+}
+
+func (a *App) handleCreateSiteContent() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var content SiteContent
+		if err := json.NewDecoder(r.Body).Decode(&content); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+
+		if err := a.Validate.Struct(content); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation failed"})
+			return
+		}
+
+		created := a.storage.addSiteContent(content)
+		writeJSON(w, http.StatusCreated, created)
+	}
+}
+
+func (a *App) handleGetSiteConfig() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		config := a.storage.getSiteConfig()
+		writeJSON(w, http.StatusOK, config)
+	}
+}
+
+func (a *App) handleUpdateSiteConfig() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var config SiteConfig
+		if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON"})
+			return
+		}
+
+		a.storage.updateSiteConfig(config)
+		writeJSON(w, http.StatusOK, config)
+	}
+}
+
+func (a *App) handleGetTelegramSubscribers() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		subscribers := a.storage.getTelegramSubscribers()
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"subscribers": subscribers,
+			"count":       len(subscribers),
+		})
+	}
+}
+
+func (a *App) handleAddTelegramSubscriber() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		chatIDStr := chi.URLParam(r, "chatId")
+		chatID, err := strconv.ParseInt(chatIDStr, 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid chat ID"})
+			return
+		}
+
+		a.storage.addTelegramSubscriber(chatID)
+		writeJSON(w, http.StatusOK, map[string]string{"status": "subscribed"})
+	}
+}
+
+func (a *App) handleRemoveTelegramSubscriber() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		chatIDStr := chi.URLParam(r, "chatId")
+		chatID, err := strconv.ParseInt(chatIDStr, 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid chat ID"})
+			return
+		}
+
+		a.storage.removeTelegramSubscriber(chatID)
+		writeJSON(w, http.StatusOK, map[string]string{"status": "unsubscribed"})
+	}
+}

@@ -15,9 +15,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Jaluxi - Жалюзи под заказ и ремонт в Москве",
+  title: "Северный Контур - Жалюзи под заказ и ремонт в Санкт-Петербурге",
   description: "Профессиональное изготовление и ремонт жалюзи. Горизонтальные, вертикальные, рулонные шторы. Гарантия 12 месяцев.",
-  keywords: "жалюзи, ремонт жалюзи, горизонтальные жалюзи, вертикальные жалюзи, рулонные шторы, Москва",
+  keywords: "жалюзи, ремонт жалюзи, горизонтальные жалюзи, вертикальные жалюзи, рулонные шторы, Санкт-Петербург",
 };
 
 export default function RootLayout({
@@ -36,12 +36,9 @@ export default function RootLayout({
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                   <HomeLink href="/" className="flex items-center gap-3">
-                    <span className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white">
-                      JALUXI
-                    </span>
-                    <span className="text-sm text-slate-600 hidden sm:block">
-                      Жалюзи под заказ и ремонт
-                    </span>
+                    <div className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white">
+                      СЕВЕРНЫЙ КОНТУР
+                    </div>
                   </HomeLink>
 
                   <nav className="hidden md:flex items-center gap-8 text-sm text-slate-700">
@@ -52,13 +49,13 @@ export default function RootLayout({
                       href="/catalog"
                       className="hover:text-slate-900 transition-colors duration-200 font-medium"
                     >
-                      Каталог и расчет
+                      Каталог
                     </Link>
                     <Link
                       href="/repair"
                       className="hover:text-slate-900 transition-colors duration-200 font-medium"
                     >
-                      Ремонт жалюзи
+                      Ремонт
                     </Link>
                     <Link
                       href="/reviews"
@@ -81,17 +78,11 @@ export default function RootLayout({
                   </nav>
 
                   <div className="hidden md:flex items-center gap-4">
-                    <a
-                      href={`tel:${siteConfig.contacts.phoneTel}`}
-                      className="text-slate-700 hover:text-slate-900 font-medium transition-colors duration-200"
-                    >
-                      {siteConfig.contacts.phoneDisplay}
-                    </a>
                     <OpenRequestModalButton
                       kind="measure"
                       className="bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors duration-200 font-medium"
                     >
-                      Вызвать замерщика
+                      Заказать замер
                     </OpenRequestModalButton>
                   </div>
 

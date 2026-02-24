@@ -15,14 +15,14 @@ export type SiteContactConfig = {
 export const siteConfig: { contacts: SiteContactConfig } = {
   contacts: {
     phoneDisplay:
-      process.env.NEXT_PUBLIC_CONTACT_PHONE_DISPLAY ?? '+7 (495) 123-45-67',
-    phoneTel: process.env.NEXT_PUBLIC_CONTACT_PHONE_TEL ?? '+74951234567',
+      process.env.NEXT_PUBLIC_CONTACT_PHONE_DISPLAY ?? '+7 (812) 123-45-67',
+    phoneTel: process.env.NEXT_PUBLIC_CONTACT_PHONE_TEL ?? '+78121234567',
     whatsappUrl: process.env.NEXT_PUBLIC_CONTACT_WHATSAPP_URL ?? '',
     telegramUrl: process.env.NEXT_PUBLIC_CONTACT_TELEGRAM_URL ?? '',
-    email: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'info@jaluxi.ru',
-    city: process.env.NEXT_PUBLIC_CONTACT_CITY ?? 'Москва и область',
+    email: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'info@severnyj-kontur.ru',
+    city: process.env.NEXT_PUBLIC_CONTACT_CITY ?? 'Санкт-Петербург',
     address:
-      process.env.NEXT_PUBLIC_CONTACT_ADDRESS ?? 'Москва, ул. Примерная, д. 123',
+      process.env.NEXT_PUBLIC_CONTACT_ADDRESS ?? 'Санкт-Петербург, ул Боровая, д. 52',
     workHoursWeekdays:
       process.env.NEXT_PUBLIC_CONTACT_WORK_HOURS_WEEKDAYS ?? 'Пн–Пт: 10:00–19:00',
     workHoursSaturday:

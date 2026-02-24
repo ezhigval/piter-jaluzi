@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "supplierCode": "INT-HOR-ALU-25-WHITE",
+    "name": "Горизонтальные алюминиевые 25 мм, белые",
+    "category": "Горизонтальные жалюзи",
+    "color": "Белый",
+    "lightTransmission": 70,
+    "pricePerM2": 900,
+    "imageUrl": "/images/materials/horizontal-white.jpg"
+  },
+  {
+    "id": 2,
+    "supplierCode": "INT-VERT-TEXTURE-BEIGE",
+    "name": "Вертикальные тканевые, бежевые",
+    "category": "Вертикальные жалюзи",
+    "color": "Бежевый",
+    "lightTransmission": 50,
+    "pricePerM2": 1100,
+    "imageUrl": "/images/materials/vertical-beige.jpg"
+  },
+  {
+    "id": 3,
+    "supplierCode": "INT-ROLLER-BLACKOUT-GREY",
+    "name": "Рулонные блэкаут, серые",
+    "category": "Рулонные шторы",
+    "color": "Серый",
+    "lightTransmission": 0,
+    "pricePerM2": 1300,
+    "imageUrl": "/images/materials/roller-grey.jpg"
+  }
+]

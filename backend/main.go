@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -8,12 +9,12 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/httprate"
 	"github.com/go-playground/validator/v10"
+	_ "github.com/lib/pq"
 	"github.com/rs/cors"
 	"github.com/unrolled/secure"
 )
@@ -26,8 +27,7 @@ type App struct {
 	Router   *chi.Mux
 	Validate *validator.Validate
 	Config   AppConfig
-
-	storage *inMemoryStore
+	Storage  *DatabaseStore
 }
 
 type ProductType string
@@ -44,7 +44,7 @@ type Material struct {
 	Name              string  `json:"name"`
 	Category          string  `json:"category"`
 	Color             string  `json:"color,omitempty"`
-	LightTransmission int     `json:"lightTransmission"` // Светопропускаемость в процентах (0-100)
+	LightTransmission int     `json:"lightTransmission"`
 	PricePerM2        float64 `json:"pricePerM2"`
 	ImageURL          string  `json:"imageUrl,omitempty"`
 }
@@ -57,19 +57,24 @@ type Promotion struct {
 }
 
 type PricingConfig struct {
-	FrameMarkup      float64 `json:"frameMarkup"`      // Коэффициент стоимости каркаса (30% = 0.3)
-	ProductionMarkup float64 `json:"productionMarkup"` // Наценка производства (50% = 0.5)
-	MinAreaM2        float64 `json:"minAreaM2"`        // Минимальная площадь в м²
+	FrameMarkup       float64  `json:"frameMarkup"`
+	ProductionMarkup  float64  `json:"productionMarkup"`
+	MinAreaM2         float64  `json:"minAreaM2"`
+	InstallationFee   *float64 `json:"installationFee,omitempty"`
+	MeasurementFee    *float64 `json:"measurementFee,omitempty"`
+	MaterialBasePrice *float64 `json:"materialBasePrice,omitempty"`
+	ComplexityFactor  *float64 `json:"complexityFactor,omitempty"`
 }
 
 type SiteContent struct {
 	ID          int64  `json:"id"`
-	Page        string `json:"page"`        // страница (home, about, contacts, etc.)
-	Section     string `json:"section"`     // секция (hero, features, cta, etc.)
-	ContentType string `json:"contentType"` // тип (text, color, block)
-	Key         string `json:"key"`         // ключ (title, description, background, etc.)
-	Value       string `json:"value"`       // значение
-	IsActive    bool   `json:"isActive"`    // активен ли блок
+	Page        string `json:"page"`
+	Section     string `json:"section"`
+	ContentType string `json:"contentType"`
+	Key         string `json:"key"`
+	Value       string `json:"value"`
+	IsActive    bool   `json:"isActive"`
+	Order       int    `json:"order,omitempty"`
 }
 
 type SiteConfig struct {
@@ -83,12 +88,13 @@ type SiteConfig struct {
 }
 
 type Review struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name" validate:"required,min=2,max=80"`
-	Rating    int       `json:"rating" validate:"required,min=1,max=5"`
-	Comment   string    `json:"comment" validate:"required,min=10,max=1000"`
-	ImageURL  string    `json:"imageUrl,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID              int64     `json:"id"`
+	Name            string    `json:"name"`
+	Rating          int       `json:"rating"`
+	Comment         string    `json:"comment"`
+	ImageURL        string    `json:"imageUrl,omitempty"`
+	CompanyResponse string    `json:"companyResponse,omitempty"`
+	CreatedAt       time.Time `json:"createdAt"`
 }
 
 type PriceEstimateRequest struct {
@@ -105,259 +111,347 @@ type PriceEstimateResponse struct {
 	Breakdown string  `json:"breakdown"`
 }
 
-type inMemoryStore struct {
-	mu            sync.RWMutex
-	materials     []Material
-	promotions    []Promotion
-	reviews       []Review
-	pricingConfig PricingConfig
-	siteContent   []SiteContent
-	siteConfig    SiteConfig
-	nextID        int64
+type DatabaseStore struct {
+	db       *sql.DB
+	validate *validator.Validate
 }
 
-func newInMemoryStore() *inMemoryStore {
-	s := &inMemoryStore{
-		pricingConfig: PricingConfig{
-			FrameMarkup:      0.3, // 30%
-			ProductionMarkup: 0.5, // 50%
-			MinAreaM2:        0.5, // Минимальная площадь
-		},
-		siteConfig: SiteConfig{
+func newDatabaseStore(dbURL string) (*DatabaseStore, error) {
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	store := &DatabaseStore{
+		db:       db,
+		validate: validator.New(),
+	}
+
+	// Run migrations
+	if err := store.runMigrations(); err != nil {
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	return store, nil
+}
+
+func (s *DatabaseStore) runMigrations() error {
+	migrationFile := "migrations/001_initial_schema.sql"
+	content, err := os.ReadFile(migrationFile)
+	if err != nil {
+		return fmt.Errorf("failed to read migration file: %w", err)
+	}
+
+	_, err = s.db.Exec(string(content))
+	if err != nil {
+		return fmt.Errorf("failed to execute migration: %w", err)
+	}
+
+	log.Println("Database migrations completed successfully")
+	return nil
+}
+
+func (s *DatabaseStore) Close() error {
+	return s.db.Close()
+}
+
+// Materials
+func (s *DatabaseStore) getMaterials() ([]Material, error) {
+	rows, err := s.db.Query(`
+		SELECT id, supplier_code, name, category, color, light_transmission, price_per_m2, image_url 
+		FROM materials 
+		ORDER BY id
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var materials []Material
+	for rows.Next() {
+		var m Material
+		err := rows.Scan(
+			&m.ID, &m.SupplierCode, &m.Name, &m.Category, &m.Color,
+			&m.LightTransmission, &m.PricePerM2, &m.ImageURL,
+		)
+		if err != nil {
+			return nil, err
+		}
+		materials = append(materials, m)
+	}
+	return materials, nil
+}
+
+func (s *DatabaseStore) findMaterial(id int64) (*Material, error) {
+	var m Material
+	err := s.db.QueryRow(`
+		SELECT id, supplier_code, name, category, color, light_transmission, price_per_m2, image_url 
+		FROM materials WHERE id = $1
+	`, id).Scan(
+		&m.ID, &m.SupplierCode, &m.Name, &m.Category, &m.Color,
+		&m.LightTransmission, &m.PricePerM2, &m.ImageURL,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &m, err
+}
+
+func (s *DatabaseStore) addMaterial(material Material) (Material, error) {
+	err := s.db.QueryRow(`
+		INSERT INTO materials (supplier_code, name, category, color, light_transmission, price_per_m2, image_url)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`, material.SupplierCode, material.Name, material.Category, material.Color,
+		material.LightTransmission, material.PricePerM2, material.ImageURL).Scan(&material.ID)
+	return material, err
+}
+
+func (s *DatabaseStore) updateMaterial(material Material) (*Material, error) {
+	_, err := s.db.Exec(`
+		UPDATE materials 
+		SET supplier_code = $2, name = $3, category = $4, color = $5, 
+		    light_transmission = $6, price_per_m2 = $7, image_url = $8, updated_at = NOW()
+		WHERE id = $1
+	`, material.ID, material.SupplierCode, material.Name, material.Category, material.Color,
+		material.LightTransmission, material.PricePerM2, material.ImageURL)
+	if err != nil {
+		return nil, err
+	}
+	return &material, nil
+}
+
+func (s *DatabaseStore) deleteMaterial(id int64) error {
+	_, err := s.db.Exec("DELETE FROM materials WHERE id = $1", id)
+	return err
+}
+
+// Promotions
+func (s *DatabaseStore) getPromotions() ([]Promotion, error) {
+	rows, err := s.db.Query(`
+		SELECT id, title, description, badge 
+		FROM promotions 
+		WHERE is_active = true 
+		ORDER BY id
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var promotions []Promotion
+	for rows.Next() {
+		var p Promotion
+		err := rows.Scan(&p.ID, &p.Title, &p.Description, &p.Badge)
+		if err != nil {
+			return nil, err
+		}
+		promotions = append(promotions, p)
+	}
+	return promotions, nil
+}
+
+// Reviews
+func (s *DatabaseStore) getReviews() ([]Review, error) {
+	rows, err := s.db.Query(`
+		SELECT id, name, rating, comment, image_url, company_response, created_at 
+		FROM reviews 
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reviews []Review
+	for rows.Next() {
+		var r Review
+		err := rows.Scan(&r.ID, &r.Name, &r.Rating, &r.Comment, &r.ImageURL, &r.CompanyResponse, &r.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		reviews = append(reviews, r)
+	}
+	return reviews, nil
+}
+
+func (s *DatabaseStore) addReview(review Review) (Review, error) {
+	err := s.db.QueryRow(`
+		INSERT INTO reviews (name, rating, comment, image_url, company_response)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, created_at
+	`, review.Name, review.Rating, review.Comment, review.ImageURL, review.CompanyResponse).Scan(&review.ID, &review.CreatedAt)
+	return review, err
+}
+
+// Pricing Config
+func (s *DatabaseStore) getPricingConfig() (PricingConfig, error) {
+	var config PricingConfig
+	err := s.db.QueryRow(`
+		SELECT frame_markup, production_markup, min_area_m2, installation_fee, measurement_fee, material_base_price, complexity_factor
+		FROM pricing_config 
+		ORDER BY id DESC 
+		LIMIT 1
+	`).Scan(
+		&config.FrameMarkup, &config.ProductionMarkup, &config.MinAreaM2,
+		&config.InstallationFee, &config.MeasurementFee, &config.MaterialBasePrice, &config.ComplexityFactor,
+	)
+	if err == sql.ErrNoRows {
+		// Return default values if no config exists
+		return PricingConfig{
+			FrameMarkup:      0.3,
+			ProductionMarkup: 0.5,
+			MinAreaM2:        0.5,
+		}, nil
+	}
+	return config, err
+}
+
+func (s *DatabaseStore) updatePricingConfig(config PricingConfig) error {
+	_, err := s.db.Exec(`
+		INSERT INTO pricing_config (frame_markup, production_markup, min_area_m2, installation_fee, measurement_fee, material_base_price, complexity_factor)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, config.FrameMarkup, config.ProductionMarkup, config.MinAreaM2,
+		config.InstallationFee, config.MeasurementFee, config.MaterialBasePrice, config.ComplexityFactor)
+	return err
+}
+
+// Site Content
+func (s *DatabaseStore) getSiteContent() ([]SiteContent, error) {
+	rows, err := s.db.Query(`
+		SELECT id, page, section, content_type, key_name, value, is_active, order_index
+		FROM site_content 
+		ORDER BY page, section, order_index
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var content []SiteContent
+	for rows.Next() {
+		var c SiteContent
+		err := rows.Scan(&c.ID, &c.Page, &c.Section, &c.ContentType, &c.Key, &c.Value, &c.IsActive, &c.Order)
+		if err != nil {
+			return nil, err
+		}
+		content = append(content, c)
+	}
+	return content, nil
+}
+
+func (s *DatabaseStore) getSiteContentByPage(page string) ([]SiteContent, error) {
+	rows, err := s.db.Query(`
+		SELECT id, page, section, content_type, key_name, value, is_active, order_index
+		FROM site_content 
+		WHERE page = $1 AND is_active = true
+		ORDER BY order_index
+	`, page)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var content []SiteContent
+	for rows.Next() {
+		var c SiteContent
+		err := rows.Scan(&c.ID, &c.Page, &c.Section, &c.ContentType, &c.Key, &c.Value, &c.IsActive, &c.Order)
+		if err != nil {
+			return nil, err
+		}
+		content = append(content, c)
+	}
+	return content, nil
+}
+
+func (s *DatabaseStore) updateSiteContent(content SiteContent) (*SiteContent, error) {
+	_, err := s.db.Exec(`
+		UPDATE site_content 
+		SET page = $2, section = $3, content_type = $4, key_name = $5, value = $6, is_active = $7, order_index = $8, updated_at = NOW()
+		WHERE id = $1
+	`, content.ID, content.Page, content.Section, content.ContentType, content.Key, content.Value, content.IsActive, content.Order)
+	if err != nil {
+		return nil, err
+	}
+	return &content, nil
+}
+
+func (s *DatabaseStore) addSiteContent(content SiteContent) (SiteContent, error) {
+	err := s.db.QueryRow(`
+		INSERT INTO site_content (page, section, content_type, key_name, value, is_active, order_index)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`, content.Page, content.Section, content.ContentType, content.Key, content.Value, content.IsActive, content.Order).Scan(&content.ID)
+	return content, err
+}
+
+// Site Config
+func (s *DatabaseStore) getSiteConfig() (SiteConfig, error) {
+	var config SiteConfig
+	err := s.db.QueryRow(`
+		SELECT primary_color, secondary_color, accent_color, company_name, company_phone, company_email, company_address
+		FROM site_config 
+		ORDER BY id DESC 
+		LIMIT 1
+	`).Scan(&config.PrimaryColor, &config.SecondaryColor, &config.AccentColor, &config.CompanyName, &config.CompanyPhone, &config.CompanyEmail, &config.CompanyAddress)
+	if err == sql.ErrNoRows {
+		// Return default values if no config exists
+		return SiteConfig{
 			PrimaryColor:   "#blue-600",
 			SecondaryColor: "#blue-800",
 			AccentColor:    "#pink-500",
-			CompanyName:    "Jaluxi",
-			CompanyPhone:   "+7 (495) 123-45-67",
-			CompanyEmail:   "info@jaluxi.ru",
-			CompanyAddress: "Москва, ул. Примерная, д. 123",
-		},
-		siteContent: []SiteContent{
-			{
-				ID:          1,
-				Page:        "home",
-				Section:     "hero",
-				ContentType: "text",
-				Key:         "title",
-				Value:       "Жалюзи под ваш размер окна за 3–5 дней",
-				IsActive:    true,
-			},
-			{
-				ID:          2,
-				Page:        "home",
-				Section:     "hero",
-				ContentType: "text",
-				Key:         "subtitle",
-				Value:       "Изготовление и ремонт жалюзи в Москве",
-				IsActive:    true,
-			},
-			{
-				ID:          3,
-				Page:        "home",
-				Section:     "hero",
-				ContentType: "text",
-				Key:         "description",
-				Value:       "Подбираем материалы у надежных поставщиков, собираем жалюзи под ваш проем и выезжаем на замер и установку.",
-				IsActive:    true,
-			},
-			{
-				ID:          4,
-				Page:        "about",
-				Section:     "hero",
-				ContentType: "text",
-				Key:         "title",
-				Value:       "О компании Jaluxi",
-				IsActive:    true,
-			},
-			{
-				ID:          5,
-				Page:        "about",
-				Section:     "hero",
-				ContentType: "text",
-				Key:         "subtitle",
-				Value:       "Профессиональное производство и установка жалюзи с 2013 года",
-				IsActive:    true,
-			},
-		},
-		materials: []Material{
-			{
-				ID:                1,
-				SupplierCode:      "INT-HOR-ALU-25-WHITE",
-				Name:              "Горизонтальные алюминиевые 25 мм, белые",
-				Category:          "Горизонтальные жалюзи",
-				Color:             "Белый",
-				LightTransmission: 70, // 70% светопропускаемость
-				PricePerM2:        900,
-				ImageURL:          "/images/materials/horizontal-white.jpg",
-			},
-			{
-				ID:                2,
-				SupplierCode:      "INT-VERT-TEXTURE-BEIGE",
-				Name:              "Вертикальные тканевые, бежевые",
-				Category:          "Вертикальные жалюзи",
-				Color:             "Бежевый",
-				LightTransmission: 50, // 50% светопропускаемость
-				PricePerM2:        1100,
-				ImageURL:          "/images/materials/vertical-beige.jpg",
-			},
-			{
-				ID:                3,
-				SupplierCode:      "INT-ROLLER-BLACKOUT-GREY",
-				Name:              "Рулонные блэкаут, серые",
-				Category:          "Рулонные шторы",
-				Color:             "Серый",
-				LightTransmission: 0, // 0% светопропускаемость (блэкаут)
-				PricePerM2:        1300,
-				ImageURL:          "/images/materials/roller-grey.jpg",
-			},
-		},
-		promotions: []Promotion{
-			{
-				ID:          1,
-				Title:       "Скидка 10% на второй комплект",
-				Description: "При заказе жалюзи на два и более окна — скидка на каждый следующий комплект.",
-				Badge:       "Акция",
-			},
-		},
-		reviews: []Review{},
-		nextID:  6, // Учитываем 5 начальных элементов контента
+			CompanyName:    "Северный Контур",
+			CompanyPhone:   "+7 (812) 123-45-67",
+			CompanyEmail:   "info@severnyj-kontur.ru",
+			CompanyAddress: "Санкт-Петербург, ул Боровая, д. 52",
+		}, nil
 	}
-	return s
+	return config, err
 }
 
-func (s *inMemoryStore) addReview(r Review) Review {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	r.ID = s.nextID
-	s.nextID++
-	s.reviews = append([]Review{r}, s.reviews...)
-	return r
+func (s *DatabaseStore) updateSiteConfig(config SiteConfig) error {
+	_, err := s.db.Exec(`
+		INSERT INTO site_config (primary_color, secondary_color, accent_color, company_name, company_phone, company_email, company_address)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, config.PrimaryColor, config.SecondaryColor, config.AccentColor, config.CompanyName, config.CompanyPhone, config.CompanyEmail, config.CompanyAddress)
+	return err
 }
 
-func (s *inMemoryStore) getMaterials() []Material {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return append([]Material(nil), s.materials...)
-}
+// Telegram Subscribers
+func (s *DatabaseStore) getTelegramSubscribers() ([]int64, error) {
+	rows, err := s.db.Query("SELECT chat_id FROM telegram_subscribers ORDER BY subscribed_at")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-func (s *inMemoryStore) findMaterial(id int64) *Material {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for i := range s.materials {
-		if s.materials[i].ID == id {
-			m := s.materials[i]
-			return &m
+	var subscribers []int64
+	for rows.Next() {
+		var chatID int64
+		if err := rows.Scan(&chatID); err != nil {
+			return nil, err
 		}
+		subscribers = append(subscribers, chatID)
 	}
-	return nil
+	return subscribers, nil
 }
 
-func (s *inMemoryStore) getPromotions() []Promotion {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return append([]Promotion(nil), s.promotions...)
+func (s *DatabaseStore) addTelegramSubscriber(chatID int64) error {
+	_, err := s.db.Exec(`
+		INSERT INTO telegram_subscribers (chat_id) 
+		VALUES ($1) 
+		ON CONFLICT (chat_id) DO NOTHING
+	`, chatID)
+	return err
 }
 
-func (s *inMemoryStore) getReviews() []Review {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return append([]Review(nil), s.reviews...)
-}
-
-func (s *inMemoryStore) getPricingConfig() PricingConfig {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.pricingConfig
-}
-
-func (s *inMemoryStore) updatePricingConfig(config PricingConfig) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.pricingConfig = config
-}
-
-func (s *inMemoryStore) addMaterial(material Material) Material {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	material.ID = s.nextID
-	s.nextID++
-	s.materials = append(s.materials, material)
-	return material
-}
-
-func (s *inMemoryStore) updateMaterial(material Material) *Material {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i := range s.materials {
-		if s.materials[i].ID == material.ID {
-			s.materials[i] = material
-			return &s.materials[i]
-		}
-	}
-	return nil
-}
-
-func (s *inMemoryStore) deleteMaterial(id int64) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i := range s.materials {
-		if s.materials[i].ID == id {
-			s.materials = append(s.materials[:i], s.materials[i+1:]...)
-			return true
-		}
-	}
-	return false
-}
-
-func (s *inMemoryStore) getSiteContent() []SiteContent {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return append([]SiteContent(nil), s.siteContent...)
-}
-
-func (s *inMemoryStore) getSiteContentByPage(page string) []SiteContent {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	var result []SiteContent
-	for _, content := range s.siteContent {
-		if content.Page == page && content.IsActive {
-			result = append(result, content)
-		}
-	}
-	return result
-}
-
-func (s *inMemoryStore) updateSiteContent(content SiteContent) *SiteContent {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i := range s.siteContent {
-		if s.siteContent[i].ID == content.ID {
-			s.siteContent[i] = content
-			return &s.siteContent[i]
-		}
-	}
-	return nil
-}
-
-func (s *inMemoryStore) addSiteContent(content SiteContent) SiteContent {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	content.ID = s.nextID
-	s.nextID++
-	s.siteContent = append(s.siteContent, content)
-	return content
-}
-
-func (s *inMemoryStore) getSiteConfig() SiteConfig {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.siteConfig
-}
-
-func (s *inMemoryStore) updateSiteConfig(config SiteConfig) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.siteConfig = config
+func (s *DatabaseStore) removeTelegramSubscriber(chatID int64) error {
+	_, err := s.db.Exec("DELETE FROM telegram_subscribers WHERE chat_id = $1", chatID)
+	return err
 }
 
 func main() {
@@ -365,11 +459,19 @@ func main() {
 		Port: getEnv("BACKEND_PORT", getEnv("PORT", "8080")),
 	}
 
+	// Initialize database
+	dbURL := getEnv("DATABASE_URL", "postgres://user:password@localhost/jaluxi?sslmode=disable")
+	storage, err := newDatabaseStore(dbURL)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer storage.Close()
+
 	app := &App{
 		Router:   chi.NewRouter(),
 		Validate: validator.New(),
 		Config:   cfg,
-		storage:  newInMemoryStore(),
+		Storage:  storage,
 	}
 
 	app.setupMiddleware()
@@ -385,6 +487,22 @@ func main() {
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
 	}
+}
+
+func getEnv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if payload == nil {
+		return
+	}
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 func (a *App) setupMiddleware() {
@@ -448,6 +566,11 @@ func (a *App) registerRoutes() {
 			// Site config
 			r.Get("/config", a.handleGetSiteConfig())
 			r.Put("/config", a.handleUpdateSiteConfig())
+
+			// Telegram subscribers management
+			r.Get("/telegram/subscribers", a.handleGetTelegramSubscribers())
+			r.Post("/telegram/subscribers/{chatId}", a.handleAddTelegramSubscriber())
+			r.Delete("/telegram/subscribers/{chatId}", a.handleRemoveTelegramSubscriber())
 		})
 
 		r.Get("/catalog", a.handleCatalog())
@@ -462,39 +585,36 @@ func (a *App) registerRoutes() {
 	a.Router.Handle("/*", fileServer)
 }
 
-func getEnv(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
-}
-
-func writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if payload == nil {
-		return
-	}
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
+// Handlers
 func (a *App) handleCatalog() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		mats := a.storage.getMaterials()
-		writeJSON(w, http.StatusOK, mats)
+		materials, err := a.Storage.getMaterials()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
+		writeJSON(w, http.StatusOK, materials)
 	}
 }
 
 func (a *App) handlePromotions() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		promos := a.storage.getPromotions()
-		writeJSON(w, http.StatusOK, promos)
+		promotions, err := a.Storage.getPromotions()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
+		writeJSON(w, http.StatusOK, promotions)
 	}
 }
 
 func (a *App) handleReviews() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		reviews := a.storage.getReviews()
+		reviews, err := a.Storage.getReviews()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusOK, reviews)
 	}
 }
@@ -520,13 +640,16 @@ func (a *App) handleCreateReview() http.HandlerFunc {
 		}
 
 		review := Review{
-			Name:      in.Name,
-			Rating:    in.Rating,
-			Comment:   in.Comment,
-			ImageURL:  in.ImageURL,
-			CreatedAt: time.Now().UTC(),
+			Name:     in.Name,
+			Rating:   in.Rating,
+			Comment:  in.Comment,
+			ImageURL: in.ImageURL,
 		}
-		created := a.storage.addReview(review)
+		created, err := a.Storage.addReview(review)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusCreated, created)
 	}
 }
@@ -544,13 +667,17 @@ func (a *App) handleEstimate() http.HandlerFunc {
 			return
 		}
 
-		material := a.storage.findMaterial(in.MaterialID)
-		if material == nil {
+		material, err := a.Storage.findMaterial(in.MaterialID)
+		if err != nil || material == nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "material not found"})
 			return
 		}
 
-		config := a.storage.getPricingConfig()
+		config, err := a.Storage.getPricingConfig()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 
 		widthM := float64(in.WidthMm) / 1000.0
 		heightM := float64(in.HeightMm) / 1000.0
@@ -592,7 +719,11 @@ func (a *App) handleEstimate() http.HandlerFunc {
 
 func (a *App) handleGetPricingConfig() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		config := a.storage.getPricingConfig()
+		config, err := a.Storage.getPricingConfig()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusOK, config)
 	}
 }
@@ -610,7 +741,10 @@ func (a *App) handleUpdatePricingConfig() http.HandlerFunc {
 			return
 		}
 
-		a.storage.updatePricingConfig(config)
+		if err := a.Storage.updatePricingConfig(config); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusOK, config)
 	}
 }
@@ -628,7 +762,11 @@ func (a *App) handleCreateMaterial() http.HandlerFunc {
 			return
 		}
 
-		created := a.storage.addMaterial(material)
+		created, err := a.Storage.addMaterial(material)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusCreated, created)
 	}
 }
@@ -654,7 +792,11 @@ func (a *App) handleUpdateMaterial() http.HandlerFunc {
 		}
 
 		material.ID = id
-		updated := a.storage.updateMaterial(material)
+		updated, err := a.Storage.updateMaterial(material)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		if updated == nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "material not found"})
 			return
@@ -673,8 +815,8 @@ func (a *App) handleDeleteMaterial() http.HandlerFunc {
 			return
 		}
 
-		if !a.storage.deleteMaterial(id) {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "material not found"})
+		if err := a.Storage.deleteMaterial(id); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
 			return
 		}
 
@@ -684,7 +826,11 @@ func (a *App) handleDeleteMaterial() http.HandlerFunc {
 
 func (a *App) handleGetSiteContent() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		content := a.storage.getSiteContent()
+		content, err := a.Storage.getSiteContent()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusOK, content)
 	}
 }
@@ -692,7 +838,11 @@ func (a *App) handleGetSiteContent() http.HandlerFunc {
 func (a *App) handleGetSiteContentByPage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		page := chi.URLParam(r, "page")
-		content := a.storage.getSiteContentByPage(page)
+		content, err := a.Storage.getSiteContentByPage(page)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusOK, content)
 	}
 }
@@ -713,7 +863,11 @@ func (a *App) handleUpdateSiteContent() http.HandlerFunc {
 		}
 
 		content.ID = id
-		updated := a.storage.updateSiteContent(content)
+		updated, err := a.Storage.updateSiteContent(content)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		if updated == nil {
 			writeJSON(w, http.StatusNotFound, map[string]string{"error": "content not found"})
 			return
@@ -736,14 +890,22 @@ func (a *App) handleCreateSiteContent() http.HandlerFunc {
 			return
 		}
 
-		created := a.storage.addSiteContent(content)
+		created, err := a.Storage.addSiteContent(content)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusCreated, created)
 	}
 }
 
 func (a *App) handleGetSiteConfig() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		config := a.storage.getSiteConfig()
+		config, err := a.Storage.getSiteConfig()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusOK, config)
 	}
 }
@@ -756,7 +918,58 @@ func (a *App) handleUpdateSiteConfig() http.HandlerFunc {
 			return
 		}
 
-		a.storage.updateSiteConfig(config)
+		if err := a.Storage.updateSiteConfig(config); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
 		writeJSON(w, http.StatusOK, config)
+	}
+}
+
+func (a *App) handleGetTelegramSubscribers() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		subscribers, err := a.Storage.getTelegramSubscribers()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"subscribers": subscribers,
+			"count":       len(subscribers),
+		})
+	}
+}
+
+func (a *App) handleAddTelegramSubscriber() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		chatIDStr := chi.URLParam(r, "chatId")
+		chatID, err := strconv.ParseInt(chatIDStr, 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid chat ID"})
+			return
+		}
+
+		if err := a.Storage.addTelegramSubscriber(chatID); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "subscribed"})
+	}
+}
+
+func (a *App) handleRemoveTelegramSubscriber() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		chatIDStr := chi.URLParam(r, "chatId")
+		chatID, err := strconv.ParseInt(chatIDStr, 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid chat ID"})
+			return
+		}
+
+		if err := a.Storage.removeTelegramSubscriber(chatID); err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "database error"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "unsubscribed"})
 	}
 }

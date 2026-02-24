@@ -30,15 +30,15 @@ export default function Home() {
     title: generateSEOTitle('Жалюзи в Санкт-Петербурге - Изготовление и установка'),
     description: generateSEODescription('жалюзи всех видов: горизонтальные, вертикальные, рулонные, римские'),
     keywords: generateKeywords('жалюзи'),
-    ogTitle: 'Jaluxi - Профессиональные жалюзи в Санкт-Петербурге',
+    ogTitle: 'Северный Контур - Профессиональные жалюзи в Санкт-Петербурге',
     ogDescription: 'Изготовление, установка и ремонт жалюзи. Горизонтальные, вертикальные, рулонные. Гарантия качества.',
     ogImage: '/images/og-home.jpg',
-    canonicalUrl: 'https://jaluxi.ru/'
+    canonicalUrl: 'https://severnyj-kontur.ru/'
   }
 
   const structuredData = [
     createWebPageStructuredData(
-      'https://jaluxi.ru/',
+      'https://severnyj-kontur.ru/',
       seoData.title,
       seoData.description
     ),
@@ -98,7 +98,7 @@ export default function Home() {
   const hero = blocks.find((b) => b.type === 'hero')?.content
   const cta = blocks.find((b) => b.type === 'cta')?.content
 
-  const heroSubtitle = hero?.subtitle ?? 'Изготовление и ремонт жалюзи в Москве'
+  const heroSubtitle = hero?.subtitle ?? 'Изготовление и ремонт жалюзи в Санкт-Петербурге'
   const heroTitle = hero?.title ?? 'Жалюзи под ваш размер окна за 3–5 дней'
   const heroDescription =
     hero?.description ??

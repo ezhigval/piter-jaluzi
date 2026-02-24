@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "page": "home",
+    "section": "hero",
+    "contentType": "text",
+    "key": "title",
+    "value": "Жалюзи под ваш размер окна за 3–5 дней",
+    "isActive": true
+  },
+  {
+    "id": 2,
+    "page": "home",
+    "section": "hero",
+    "contentType": "text",
+    "key": "subtitle",
+    "value": "Изготовление и ремонт жалюзи в Москве",
+    "isActive": true
+  },
+  {
+    "id": 3,
+    "page": "home",
+    "section": "hero",
+    "contentType": "text",
+    "key": "description",
+    "value": "Подбираем материалы у надежных поставщиков, собираем жалюзи под ваш проем и выезжаем на замер и установку.",
+    "isActive": true
+  },
+  {
+    "id": 4,
+    "page": "about",
+    "section": "hero",
+    "contentType": "text",
+    "key": "title",
+    "value": "О компании Jaluxi",
+    "isActive": true
+  },
+  {
+    "id": 5,
+    "page": "about",
+    "section": "hero",
+    "contentType": "text",
+    "key": "subtitle",
+    "value": "Профессиональное производство и установка жалюзи с 2013 года",
+    "isActive": true
+  }
+]
