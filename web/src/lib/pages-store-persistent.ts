@@ -26,7 +26,7 @@ export type PageContent = {
   modifiedBy: string
 }
 
-const PAGES_FILE = path.join(process.cwd(), 'data', 'pages.json')
+const PAGES_FILE = path.join(process.cwd(), '..', 'backend', 'data', 'pages.json')
 
 // Ensure data directory exists
 async function ensureDataDir() {
