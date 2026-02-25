@@ -5,7 +5,9 @@ import Head from 'next/head'
 import VisualBlockEditor from '@/components/VisualBlockEditor'
 import { blockTemplates, getTemplatesByCategory } from '@/lib/block-templates'
 import SEOEditor from '@/components/SEOEditor'
+import PageEditor from '@/components/PageEditor'
 import { SEOData } from '@/types/seo'
+import { Page, Block } from '@/lib/site-builder-types'
 
 type Role = 'admin' | 'manager' | 'viewer'
 
@@ -132,6 +134,10 @@ export default function AdminPage() {
   const [pageDraft, setPageDraft] = useState<PageContent | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [pageEditorTab, setPageEditorTab] = useState<'content' | 'seo'>('content')
+  
+  // Новое состояние для PageEditor
+  const [pageEditorOpen, setPageEditorOpen] = useState(false)
+  const [editingPage, setEditingPage] = useState<Page | null>(null)
 
   const [materials, setMaterials] = useState<Material[]>([])
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(null)
@@ -434,11 +440,7 @@ export default function AdminPage() {
   }
 
   const savePageDraft = async () => {
-    if (!pageDraft) return
-    if (!hasPerm('content.edit')) {
-      alert('Недостаточно прав')
-      return
-    }
+    if (!pageDraft || !hasPerm('content.edit')) return
 
     const res = await fetch('/api/admin/pages', {
       method: 'PUT',
@@ -446,18 +448,77 @@ export default function AdminPage() {
       body: JSON.stringify({ pageId: pageDraft.id, title: pageDraft.title, description: pageDraft.description, blocks: pageDraft.blocks }),
     })
 
-    const data = await res.json()
-    if (!res.ok || !data?.success) {
-      alert(data?.error ?? 'Ошибка сохранения')
+    if (!res.ok) {
+      alert('Ошибка при сохранении')
       return
     }
 
-    // Обновляем pageDraft сохраненными данными, а не перезагружаем с сервера
-    setPageDraft(data.data)
     setHasUnsavedChanges(false)
     
     // Фоновое обновление списка страниц без сброса текущего редактирования
     fetchPages()
+  }
+
+  // Новые функции для PageEditor
+  const handleCreatePage = () => {
+    setEditingPage(null)
+    setPageEditorOpen(true)
+  }
+
+  const handleEditPage = (page: PageContent) => {
+    // Конвертируем старый формат в новый
+    const newPage: Page = {
+      id: page.id,
+      slug: page.slug,
+      title: page.title,
+      description: page.description,
+      blocks: page.blocks.map(block => ({
+        ...block,
+        isActive: true, // Устанавливаем по умолчанию
+        seo: {},
+        styles: block.styles || {}
+      })),
+      isActive: page.isActive !== false,
+      isInNavigation: true,
+      navigationTitle: page.title.replace(' - Северный Контур', ''),
+      navigationOrder: 999,
+      lastModified: page.lastModified,
+      modifiedBy: page.modifiedBy
+    }
+    setEditingPage(newPage)
+    setPageEditorOpen(true)
+  }
+
+  const handleSavePage = async (page: Page) => {
+    try {
+      const res = await fetch('/api/admin/pages', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          pageId: page.id, 
+          title: page.title, 
+          description: page.description, 
+          blocks: page.blocks,
+          slug: page.slug,
+          isActive: page.isActive,
+          isInNavigation: page.isInNavigation,
+          navigationTitle: page.navigationTitle,
+          navigationOrder: page.navigationOrder
+        }),
+      })
+
+      if (!res.ok) {
+        alert('Ошибка при сохранении страницы')
+        return
+      }
+
+      setPageEditorOpen(false)
+      setEditingPage(null)
+      fetchPages()
+    } catch (error) {
+      console.error('Error saving page:', error)
+      alert('Ошибка при сохранении страницы')
+    }
   }
 
   const addMaterial = async () => {
@@ -895,22 +956,41 @@ export default function AdminPage() {
             {activeTab === 'pages' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1">
-                  <h2 className="text-xl font-semibold mb-4">Страницы сайта</h2>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-semibold">Страницы сайта</h2>
+                    {hasPerm('content.edit') && (
+                      <button
+                        onClick={handleCreatePage}
+                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                      >
+                        + Создать
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     {pages.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => setSelectedPageId(p.id)}
-                        className={
-                          (selectedPageId === p.id
-                            ? 'w-full text-left p-3 rounded-lg border border-blue-500 bg-blue-50'
-                            : 'w-full text-left p-3 rounded-lg border border-gray-200 hover:border-gray-300')
-                        }
-                      >
-                        <div className="font-medium text-gray-900">{p.title}</div>
-                        <div className="text-sm text-gray-600">{p.slug}</div>
-                        <div className="text-xs text-gray-500 mt-1">{new Date(p.lastModified).toLocaleString('ru-RU')}</div>
-                      </button>
+                      <div key={p.id} className="space-y-1">
+                        <button
+                          onClick={() => setSelectedPageId(p.id)}
+                          className={
+                            (selectedPageId === p.id
+                              ? 'w-full text-left p-3 rounded-lg border border-blue-500 bg-blue-50'
+                              : 'w-full text-left p-3 rounded-lg border border-gray-200 hover:border-gray-300')
+                          }
+                        >
+                          <div className="font-medium text-gray-900">{p.title}</div>
+                          <div className="text-sm text-gray-600">{p.slug}</div>
+                          <div className="text-xs text-gray-500 mt-1">{new Date(p.lastModified).toLocaleString('ru-RU')}</div>
+                        </button>
+                        {hasPerm('content.edit') && (
+                          <button
+                            onClick={() => handleEditPage(p)}
+                            className="w-full text-left p-2 text-xs bg-gray-50 hover:bg-gray-100 rounded-b border border-gray-200 text-blue-600"
+                          >
+                            📝 Редактировать в конструкторе
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1730,6 +1810,18 @@ export default function AdminPage() {
         </div>
       </div>
     </div>
+    
+    {/* PageEditor Modal */}
+    {pageEditorOpen && (
+      <PageEditor
+        page={editingPage || undefined}
+        onSave={handleSavePage}
+        onCancel={() => {
+          setPageEditorOpen(false)
+          setEditingPage(null)
+        }}
+      />
+    )}
     </>
   )
 }
