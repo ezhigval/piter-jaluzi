@@ -5,6 +5,7 @@ import "./globals.css";
 import Footer from "@/components/Footer";
 import HomeLink from "@/components/HomeLink";
 import NavigationLink from "@/components/NavigationLink";
+import DynamicNavigation from "@/components/DynamicNavigation";
 import RequestModalProvider from "@/components/RequestModalProvider";
 import OpenRequestModalButton from "@/components/OpenRequestModalButton";
 import LayoutWithLoading from "@/components/LayoutWithLoading";
@@ -44,47 +45,11 @@ export default function RootLayout({
                       </div>
                     </HomeLink>
 
-                    <nav className="hidden md:flex items-center gap-8 text-sm text-slate-700">
-                      <HomeLink href="/" className="hover:text-slate-900 transition-colors duration-200 font-medium">
-                        Главная
-                      </HomeLink>
-                      <NavigationLink
-                        href="/catalog"
-                        className="hover:text-slate-900 transition-colors duration-200 font-medium"
-                      >
-                        Каталог
-                      </NavigationLink>
-                      <NavigationLink
-                        href="/portfolio"
-                        className="hover:text-slate-900 transition-colors duration-200 font-medium"
-                      >
-                        Портфолио
-                      </NavigationLink>
-                      <NavigationLink
-                        href="/repair"
-                        className="hover:text-slate-900 transition-colors duration-200 font-medium"
-                      >
-                        Ремонт
-                      </NavigationLink>
-                      <NavigationLink
-                        href="/reviews"
-                        className="hover:text-slate-900 transition-colors duration-200 font-medium"
-                      >
-                        Отзывы
-                      </NavigationLink>
-                      <NavigationLink
-                        href="/about"
-                        className="hover:text-slate-900 transition-colors duration-200 font-medium"
-                      >
-                        О нас
-                      </NavigationLink>
-                      <NavigationLink
-                        href="/contacts"
-                        className="hover:text-slate-900 transition-colors duration-200 font-medium"
-                      >
-                        Контакты
-                      </NavigationLink>
-                    </nav>
+                    <DynamicNavigation
+                    className="hidden md:flex items-center gap-8 text-sm text-slate-700"
+                    linkClassName="font-medium"
+                    activeLinkClassName="text-slate-900 font-semibold"
+                  />
 
                     <div className="hidden md:flex items-center gap-4">
                       <OpenRequestModalButton

@@ -1,30 +1,11 @@
 import { promises as fs } from 'fs'
 import path from 'path'
+import { Page, Block, BlockTemplate, PageTemplate, SiteSettings, SEOData } from './site-builder-types'
 
+// Сохраняем обратную совместимость со старыми типами
 export type PageBlockType = 'hero' | 'text' | 'image' | 'features' | 'testimonials' | 'cta' | 'gallery'
-
-export type PageBlock = {
-  id: string
-  type: PageBlockType
-  content: any
-  order: number
-  styles?: {
-    backgroundColor?: string
-    padding?: string
-    textAlign?: 'left' | 'center' | 'right'
-  }
-}
-
-export type PageContent = {
-  id: string
-  slug: string
-  title: string
-  description: string
-  blocks: PageBlock[]
-  isActive: boolean
-  lastModified: string
-  modifiedBy: string
-}
+export type PageBlock = Block
+export type PageContent = Page
 
 const PAGES_FILE = path.join(process.cwd(), '..', 'backend', 'data', 'pages.json')
 
@@ -49,6 +30,9 @@ function getInitialState(): PageContent[] {
       title: 'Главная - Северный Контур',
       description: 'Производство и установка жалюзи в Санкт-Петербурге',
       isActive: true,
+      isInNavigation: true,
+      navigationTitle: 'Главная',
+      navigationOrder: 1,
       lastModified: now,
       modifiedBy: 'admin',
       blocks: [
@@ -56,24 +40,32 @@ function getInitialState(): PageContent[] {
           id: 'hero-1',
           type: 'hero',
           order: 1,
+          isActive: true,
           content: {
             title: 'Жалюзи под ваш размер окна за 3–5 дней',
             subtitle: 'Изготовление и ремонт жалюзи в Санкт-Петербурге',
             description:
               'Подбираем материалы у надежных поставщиков, собираем жалюзи под ваш проем и выезжаем на замер и установку. Также быстро ремонтируем уже установленные изделия.',
-            ctaPrimary: { text: 'Рассчитать стоимость', link: '/catalog' },
-            ctaSecondary: { text: 'Вызвать замерщика', action: 'measure' },
+            button: { text: 'Рассчитать стоимость', link: '/catalog' },
+            buttons: [
+              { text: 'Рассчитать стоимость', link: '/catalog', style: 'primary' },
+              { text: 'Вызвать замерщика', link: '/contacts', style: 'secondary' }
+            ],
           },
         },
         {
           id: 'cta-1',
           type: 'cta',
           order: 99,
+          isActive: true,
           content: {
             title: 'Готовы заказать жалюзи?',
             subtitle: 'Получите бесплатную консультацию и расчет стоимости',
-            primary: { text: 'Рассчитать стоимость', link: '/catalog' },
-            secondary: { text: 'Оставить заявку', action: 'request' },
+            button: { text: 'Рассчитать стоимость', link: '/catalog' },
+            buttons: [
+              { text: 'Рассчитать стоимость', link: '/catalog', style: 'primary' },
+              { text: 'Оставить заявку', link: '/contacts', style: 'secondary' }
+            ],
           },
         },
       ],
@@ -84,18 +76,36 @@ function getInitialState(): PageContent[] {
       title: 'О компании - Северный Контур',
       description: '15 лет опыта в производстве жалюзи',
       isActive: true,
+      isInNavigation: true,
+      navigationTitle: 'О нас',
+      navigationOrder: 5,
       lastModified: now,
       modifiedBy: 'admin',
       blocks: [
         {
-          id: 'cta-1',
+          id: 'hero-2',
+          type: 'hero',
+          order: 1,
+          isActive: true,
+          content: {
+            title: 'О компании Jaluxi',
+            subtitle: 'Профессиональное производство и установка жалюзи с 2013 года',
+            description: '15 лет на рынке, более 5000 довольных клиентов, гарантия на все работы.'
+          },
+        },
+        {
+          id: 'cta-2',
           type: 'cta',
           order: 50,
+          isActive: true,
           content: {
             title: 'Готовы преобразить ваш интерьер?',
             subtitle: 'Получите бесплатную консультацию и расчет стоимости',
-            primary: { text: 'Заказать замер', action: 'measure' },
-            secondary: { text: 'Рассчитать стоимость', link: '/catalog' },
+            button: { text: 'Заказать замер', link: '/contacts' },
+            buttons: [
+              { text: 'Заказать замер', link: '/contacts', style: 'primary' },
+              { text: 'Рассчитать стоимость', link: '/catalog', style: 'secondary' }
+            ],
           },
         },
       ],
@@ -106,18 +116,36 @@ function getInitialState(): PageContent[] {
       title: 'Ремонт жалюзи - Северный Контур',
       description: 'Профессиональный ремонт жалюзи в Санкт-Петербурге',
       isActive: true,
+      isInNavigation: true,
+      navigationTitle: 'Ремонт',
+      navigationOrder: 4,
       lastModified: now,
       modifiedBy: 'admin',
       blocks: [
         {
-          id: 'cta-1',
+          id: 'hero-3',
+          type: 'hero',
+          order: 1,
+          isActive: true,
+          content: {
+            title: 'Ремонт жалюзи',
+            subtitle: 'Профессиональный ремонт всех видов жалюзи',
+            description: 'Быстрый и качественный ремонт жалюзи на дому. Гарантия на все работы.'
+          },
+        },
+        {
+          id: 'cta-3',
           type: 'cta',
           order: 50,
+          isActive: true,
           content: {
             title: 'Нужен ремонт жалюзи?',
             subtitle: 'Оставьте заявку и мы свяжемся с вами в течение 15 минут',
-            primary: { text: 'Оставить заявку', action: 'request' },
-            secondary: { text: 'Позвонить', action: 'call' },
+            button: { text: 'Оставить заявку', link: '/contacts' },
+            buttons: [
+              { text: 'Оставить заявку', link: '/contacts', style: 'primary' },
+              { text: 'Позвонить', link: 'tel:+78121234567', style: 'secondary' }
+            ],
           },
         },
       ],
