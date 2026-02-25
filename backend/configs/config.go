@@ -81,6 +81,16 @@ func (c *Config) GetDSN() string {
 		" TimeZone=" + c.DatabaseTZ
 }
 
+// IsProduction проверяет, запущено ли приложение в production режиме
+func (c *Config) IsProduction() bool {
+	return c.ServerMode == "release"
+}
+
+// IsDevelopment проверяет, запущено ли приложение в development режиме
+func (c *Config) IsDevelopment() bool {
+	return c.ServerMode == "debug"
+}
+
 // Вспомогательные функции
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
