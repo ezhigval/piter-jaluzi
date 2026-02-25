@@ -65,11 +65,21 @@ export default function Home() {
         
         const materialsData = await materialsRes.json()
         const promotionsData = await promotionsRes.json()
-        const pageData = await pageRes.json().catch(() => null)
+        const pageData = await pageRes.json().catch((error) => {
+          console.error('Error fetching page data:', error)
+          return null
+        })
+        
+        console.log('Page data received:', pageData)
         
         setMaterials(materialsData.slice(0, 6)) // Показываем первые 6 материалов
         setPromotions(promotionsData)
-        if (pageData?.success && pageData?.data) setPageContent(pageData.data)
+        if (pageData?.success && pageData?.data) {
+          console.log('Setting page content:', pageData.data)
+          setPageContent(pageData.data)
+        } else {
+          console.warn('Invalid page data format:', pageData)
+        }
       } catch (error) {
         console.error('Error fetching data:', error)
       } finally {
@@ -129,16 +139,16 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                 <a
-                  href={hero?.ctaPrimary?.link ?? '/catalog'}
+                  href={ctaPrimaryLink}
                   className="inline-flex items-center justify-center rounded-full bg-slate-900 text-white px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-medium hover:bg-slate-800 transition-colors duration-200"
                 >
-                  {hero?.ctaPrimary?.text ?? 'Рассчитать стоимость'}
+                  {ctaPrimaryText}
                 </a>
                 <OpenRequestModalButton
                   kind="measure"
                   className="inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-700 px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-medium hover:bg-slate-50 transition-colors duration-200"
                 >
-                  Вызвать замерщика
+                  {ctaSecondaryText}
                 </OpenRequestModalButton>
               </div>
             </div>
