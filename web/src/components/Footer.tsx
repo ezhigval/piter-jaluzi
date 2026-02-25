@@ -55,22 +55,22 @@ export default function Footer() {
             <h3 className="text-lg font-light">Услуги</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/catalog" className="text-slate-300 hover:text-white transition-colors">
+                <Link href="/catalog?type=horizontal" className="text-slate-300 hover:text-white transition-colors">
                   Горизонтальные жалюзи
                 </Link>
               </li>
               <li>
-                <Link href="/catalog" className="text-slate-300 hover:text-white transition-colors">
+                <Link href="/catalog?type=vertical" className="text-slate-300 hover:text-white transition-colors">
                   Вертикальные жалюзи
                 </Link>
               </li>
               <li>
-                <Link href="/catalog" className="text-slate-300 hover:text-white transition-colors">
+                <Link href="/catalog?type=roller" className="text-slate-300 hover:text-white transition-colors">
                   Рулонные шторы
                 </Link>
               </li>
               <li>
-                <Link href="/catalog" className="text-slate-300 hover:text-white transition-colors">
+                <Link href="/repair" className="text-slate-300 hover:text-white transition-colors">
                   Ремонт жалюзи
                 </Link>
               </li>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Material } from '@/lib/api'
 import OpenRequestModalButton from '@/components/OpenRequestModalButton'
@@ -42,7 +43,9 @@ const categories = [
   }
 ]
 
-export default function CatalogPage() {
+// Component that uses useSearchParams
+function CatalogContent() {
+  const searchParams = useSearchParams()
   const [materials, setMaterials] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -57,6 +60,15 @@ export default function CatalogPage() {
   useEffect(() => {
     fetchMaterials()
   }, [])
+
+  // Handle URL parameters for type filtering
+  useEffect(() => {
+    const type = searchParams.get('type')
+    if (type && ['horizontal', 'vertical', 'roller'].includes(type)) {
+      setSelectedCategory(type)
+      setBlindsConfig(prev => ({ ...prev, category: type as 'horizontal' | 'vertical' | 'roller' }))
+    }
+  }, [searchParams])
 
   // Calculate price when config changes
   useEffect(() => {
@@ -553,4 +565,17 @@ function BlindsVisualization({ config, materials }: { config: BlindsConfig; mate
         </div>
       )
   }
+}
+
+// Main export with Suspense wrapper
+export default function CatalogPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-gray-400">Загрузка...</div>
+      </div>
+    }>
+      <CatalogContent />
+    </Suspense>
+  )
 }

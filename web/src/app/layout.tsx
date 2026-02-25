@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Footer from "@/components/Footer";
 import HomeLink from "@/components/HomeLink";
+import NavigationLink from "@/components/NavigationLink";
 import RequestModalProvider from "@/components/RequestModalProvider";
 import OpenRequestModalButton from "@/components/OpenRequestModalButton";
 import LayoutWithLoading from "@/components/LayoutWithLoading";
@@ -47,42 +48,42 @@ export default function RootLayout({
                       <HomeLink href="/" className="hover:text-slate-900 transition-colors duration-200 font-medium">
                         Главная
                       </HomeLink>
-                      <Link
+                      <NavigationLink
                         href="/catalog"
                         className="hover:text-slate-900 transition-colors duration-200 font-medium"
                       >
                         Каталог
-                      </Link>
-                      <Link
+                      </NavigationLink>
+                      <NavigationLink
                         href="/portfolio"
                         className="hover:text-slate-900 transition-colors duration-200 font-medium"
                       >
                         Портфолио
-                      </Link>
-                      <Link
+                      </NavigationLink>
+                      <NavigationLink
                         href="/repair"
                         className="hover:text-slate-900 transition-colors duration-200 font-medium"
                       >
                         Ремонт
-                      </Link>
-                      <Link
+                      </NavigationLink>
+                      <NavigationLink
                         href="/reviews"
                         className="hover:text-slate-900 transition-colors duration-200 font-medium"
                       >
                         Отзывы
-                      </Link>
-                      <Link
+                      </NavigationLink>
+                      <NavigationLink
                         href="/about"
                         className="hover:text-slate-900 transition-colors duration-200 font-medium"
                       >
                         О нас
-                      </Link>
-                      <Link
+                      </NavigationLink>
+                      <NavigationLink
                         href="/contacts"
                         className="hover:text-slate-900 transition-colors duration-200 font-medium"
                       >
                         Контакты
-                      </Link>
+                      </NavigationLink>
                     </nav>
 
                     <div className="hidden md:flex items-center gap-4">

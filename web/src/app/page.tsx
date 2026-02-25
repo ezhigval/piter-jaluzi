@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Material, Promotion } from '@/lib/api'
-import BlindsLoader from '@/components/BlindsLoader'
 import { useAnimation } from '@/hooks/useAnimation'
 import OpenRequestModalButton from '@/components/OpenRequestModalButton'
 import SEOHead from '@/components/SEOHead'
@@ -83,7 +82,7 @@ export default function Home() {
 
   // Показываем анимацию только при первом посещении или обновлении страницы
   if (showAnimation) {
-    return <BlindsLoader onComplete={completeAnimation} />
+    return null // Анимация теперь обрабатывается в LayoutWithLoading
   }
 
   if (loading) {
