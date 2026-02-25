@@ -5,7 +5,7 @@ import { Material, Promotion } from '@/lib/api'
 import { useAnimation } from '@/hooks/useAnimation'
 import OpenRequestModalButton from '@/components/OpenRequestModalButton'
 import SEOHead from '@/components/SEOHead'
-import BlockRenderer from '@/components/BlockRenderer'
+import LazyBlockWrapper from '@/components/LazyBlockRenderer'
 import { 
   generateSEOTitle, 
   generateSEODescription, 
@@ -123,9 +123,11 @@ export default function Home() {
         <SEOHead seo={seoData} structuredData={structuredData} breadcrumbs={breadcrumbs} />
         <div className="min-h-screen">
           {sortedBlocks.map((block) => (
-            <BlockRenderer 
+            <LazyBlockWrapper 
               key={block.id} 
               block={block}
+              threshold={0.1}
+              rootMargin="50px"
             />
           ))}
         </div>

@@ -2,6 +2,7 @@
 
 import { Block } from '@/lib/site-builder-types'
 import OpenRequestModalButton from '@/components/OpenRequestModalButton'
+import OptimizedImage, { OptimizedGallery, OptimizedBackground } from '@/components/OptimizedImage'
 
 interface BlockRendererProps {
   block: Block
@@ -82,34 +83,73 @@ export default function BlockRenderer({ block, className = '' }: BlockRendererPr
 
 // Hero блок
 function HeroBlock({ content, styles, className }: { content: any; styles: any; className: string }) {
+  const hasBackgroundImage = content.backgroundImage?.src
+  
   return (
     <section style={styles} className={className}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          {content.subtitle && (
-            <span className="block text-base sm:text-lg text-gray-600 font-medium mb-2">
-              {content.subtitle}
-            </span>
-          )}
-          {content.title && (
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-gray-900 leading-tight mb-6">
-              {content.title}
-            </h1>
-          )}
-          {content.description && (
-            <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8 max-w-3xl mx-auto">
-              {content.description}
-            </p>
-          )}
-          {content.buttons && (
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-              {content.buttons.map((button: any, index: number) => (
-                <Button key={index} button={button} />
-              ))}
+      {hasBackgroundImage ? (
+        <OptimizedBackground
+          src={content.backgroundImage.src}
+          alt={content.backgroundImage.alt || ''}
+          className="min-h-screen"
+          overlay={content.backgroundOverlay || false}
+          overlayOpacity={content.backgroundOverlayOpacity || 0.5}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              {content.subtitle && (
+                <span className="block text-base sm:text-lg text-gray-600 font-medium mb-2">
+                  {content.subtitle}
+                </span>
+              )}
+              {content.title && (
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-gray-900 leading-tight mb-6">
+                  {content.title}
+                </h1>
+              )}
+              {content.description && (
+                <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8 max-w-3xl mx-auto">
+                  {content.description}
+                </p>
+              )}
+              {content.buttons && (
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                  {content.buttons.map((button: any, index: number) => (
+                    <Button key={index} button={button} />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        </OptimizedBackground>
+      ) : (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            {content.subtitle && (
+              <span className="block text-base sm:text-lg text-gray-600 font-medium mb-2">
+                {content.subtitle}
+              </span>
+            )}
+            {content.title && (
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-gray-900 leading-tight mb-6">
+                {content.title}
+              </h1>
+            )}
+            {content.description && (
+              <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8 max-w-3xl mx-auto">
+                {content.description}
+              </p>
+            )}
+            {content.buttons && (
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+                {content.buttons.map((button: any, index: number) => (
+                  <Button key={index} button={button} />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </section>
   )
 }
@@ -147,12 +187,13 @@ function ImageBlock({ content, styles, className }: { content: any; styles: any;
         )}
         {content.image && (
           <div className="relative">
-            <img
+            <OptimizedImage
               src={content.image.src}
               alt={content.image.alt}
               width={content.image.width}
               height={content.image.height}
               className="w-full h-auto rounded-lg"
+              loading="lazy"
             />
           </div>
         )}
@@ -180,20 +221,13 @@ function GalleryBlock({ content, styles, className }: { content: any; styles: an
         {content.title && (
           <h2 className="text-2xl sm:text-3xl font-light mb-6 text-center">{content.title}</h2>
         )}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {content.images?.map((image: any, index: number) => (
-            <div key={index} className="relative group">
-              <img
-                src={image.src}
-                alt={image.alt}
-                className="w-full h-64 object-cover rounded-lg"
-              />
-              {image.caption && (
-                <p className="mt-2 text-sm text-gray-600">{image.caption}</p>
-              )}
-            </div>
-          ))}
-        </div>
+        <OptimizedGallery
+          images={content.images || []}
+          className="mt-8"
+          itemClassName="group"
+          lazy={true}
+          columns={3}
+        />
       </div>
     </section>
   )
