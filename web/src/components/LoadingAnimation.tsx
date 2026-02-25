@@ -184,22 +184,22 @@ export default function LoadingAnimation() {
             height: var(--initial-height);
           }
           30% {
-            transform: translateY(-20px) rotateX(-5deg) scaleY(0.95);
+            transform: translateY(-50px) rotateX(-5deg) scaleY(0.95);
             opacity: 1;
             height: var(--initial-height);
           }
           60% {
-            transform: translateY(-60px) rotateX(-15deg) scaleY(0.8);
+            transform: translateY(-150px) rotateX(-15deg) scaleY(0.8);
             opacity: 0.8;
             height: calc(var(--initial-height) * 0.8);
           }
           85% {
-            transform: translateY(-120px) rotateX(-25deg) scaleY(0.6);
+            transform: translateY(-300px) rotateX(-25deg) scaleY(0.6);
             opacity: 0.4;
             height: calc(var(--initial-height) * 0.6);
           }
           100% {
-            transform: translateY(-200px) rotateX(-35deg) scaleY(0.4);
+            transform: translateY(-500px) rotateX(-35deg) scaleY(0.4);
             opacity: 0;
             height: calc(var(--initial-height) * 0.4);
           }
